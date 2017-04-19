@@ -1,0 +1,491 @@
+//
+//  RegistViewController.m
+//  Golvon
+//
+//  Created by 李盼盼 on 16/3/29.
+//  Copyright © 2016年 李盼盼. All rights reserved.
+//
+
+#import "RegistViewController.h"
+#import "Edit_ViewController.h"
+#import "DownLoadDataSource.h"
+#import "TabBarViewController.h"
+#import "UserDetailViewController.h"
+#import "SetNicknameViewController.h"
+#import "ConsummateViewController.h"
+#import "SignaturesViewController.h"
+#import "DetailHeaderModel.h"
+#import "ZhuanFangModel.h"
+
+@interface RegistViewController ()<UITextFieldDelegate>
+{
+    MBProgressHUD *_HUB;
+    MBProgressHUD *_HUB1;
+
+}
+@property (nonatomic,assign) NSInteger  timeCount;
+
+@property (strong, nonatomic) DownLoadDataSource *loadData;
+
+@property (strong, nonatomic) NSMutableArray *dataArr;
+
+@property (strong, nonatomic) NSTimer *timer;
+
+@property (assign, nonatomic) BOOL    isPhoneStr;
+
+@property (assign, nonatomic) BOOL    isCodeStr;
+
+@property (strong, nonatomic)UITextField *phoneText;
+
+@property (strong, nonatomic)UITextField *codeText;
+
+@property (strong, nonatomic)UIButton *codeBtn;
+
+@property (strong, nonatomic)UIButton *comeBtn;
+
+
+@end
+
+@implementation RegistViewController
+
+
+
+- (NSString *)nameid{
+    if (!_nameid) {
+        _nameid = [[NSString alloc] init];
+    }
+    return _nameid;
+}
+
+- (DownLoadDataSource *)loadData{
+    if (!_loadData) {
+        _loadData = [[DownLoadDataSource alloc] init];
+    }
+    return _loadData;
+}
+
+- (NSMutableArray *)dataArr{
+    
+    if (!_dataArr) {
+        _dataArr = [[NSMutableArray alloc] init];
+    }
+    return _dataArr;
+}
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBarHidden = YES;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    [self createSubView];
+    [userDefaults setObject:@"0" forKey:@"name_id"];
+
+    self.view.backgroundColor = WhiteColor;
+    self.timeCount = 60;
+}
+
+#pragma mark ---- UI
+-(void)createSubView{
+    
+    UIImageView *logoimage = [[UIImageView alloc] init];
+    logoimage.frame = CGRectMake((ScreenWidth - kWvertical(82))/2, kHvertical(48), kWvertical(82), kWvertical(82));
+    logoimage.image = [UIImage imageNamed:@"logo_login"];
+    [self.view addSubview:logoimage];
+    
+    _phoneText = [[UITextField alloc] init];
+    _phoneText.placeholder = @"手机号";
+    _phoneText.frame = CGRectMake(kWvertical(28), kHvertical(157), ScreenWidth - kWvertical(56), kHvertical(45));
+    _phoneText.delegate = self;
+    _phoneText.clearButtonMode = UITextFieldViewModeWhileEditing;
+    _phoneText.font = [UIFont systemFontOfSize:kHorizontal(14)];
+    _phoneText.keyboardType = UIKeyboardTypeNumberPad;
+    [self.view addSubview:_phoneText];
+    
+    UIView *line1 = [[UIView alloc] init];
+    line1.frame = CGRectMake((ScreenWidth - kWvertical(335))/2, _phoneText.bottom, kWvertical(335), 0.5);
+    line1.backgroundColor = TINTLINCOLOR;
+    [self.view addSubview:line1];
+    
+    _codeText = [[UITextField alloc] init];
+    _codeText.delegate = self;
+    _codeText.font = [UIFont systemFontOfSize:kHorizontal(14)];
+    _codeText.frame = CGRectMake(_phoneText.x, line1.bottom + 10, kWvertical(240), kHvertical(45));
+    _codeText.placeholder = @"验证码";
+    _codeText.keyboardType = UIKeyboardTypeNumberPad;
+    _codeText.clearButtonMode = UITextFieldViewModeWhileEditing;
+    [self.view addSubview:_codeText];
+    
+    UIView *line2 = [[UIView alloc] init];
+    line2.frame = CGRectMake((ScreenWidth - kWvertical(335))/2, _codeText.bottom, kWvertical(335), 0.5);
+    line2.backgroundColor = TINTLINCOLOR;
+    [self.view addSubview:line2];
+    
+    
+//    获取验证码
+    UIView *line3 = [[UIView alloc] init];
+    line3.frame = CGRectMake(ScreenWidth - kWvertical(104), line2.bottom + kHvertical(23), 0.5, kHvertical(16));
+    line3.backgroundColor = TINTLINCOLOR;
+    [self.view addSubview:line3];
+    
+    _codeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    _codeBtn.frame = CGRectMake(ScreenWidth - kWvertical(105), _codeText.y, kWvertical(105), kHvertical(45));
+    [_codeBtn setTitle:@"获取验证码" forState:UIControlStateNormal];
+    [_codeBtn setTitleColor:localColor forState:UIControlStateNormal];
+    _codeBtn.titleLabel.font = [UIFont systemFontOfSize:kHorizontal(13)];
+    [_codeBtn addTarget:self action:@selector(ClickCode) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:_codeBtn];
+    
+//    登录按钮
+    _comeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    _comeBtn.layer.cornerRadius = 3.f;
+    _comeBtn.layer.masksToBounds = YES;
+    _comeBtn.frame = CGRectMake((ScreenWidth - kWvertical(335))/2, _codeText.bottom + kHvertical(21), kWvertical(335), kHvertical(42));
+    _comeBtn.selected = NO;
+    _comeBtn.adjustsImageWhenHighlighted = NO;
+    [_comeBtn setBackgroundImage:[self imageWithColor:rgba(53,141,227,0.65)] forState:UIControlStateNormal];
+    [_comeBtn setBackgroundImage:[self imageWithColor:localColor] forState:UIControlStateSelected];
+    [_comeBtn setTitle:@"进入" forState:UIControlStateNormal];
+    [_comeBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    _comeBtn.titleLabel.font = [UIFont systemFontOfSize:kHorizontal(16)];
+    [_comeBtn addTarget:self action:@selector(nextStep) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:_comeBtn];
+    
+    
+//    服务条款
+    UILabel *UserDetail = [[UILabel alloc] initWithFrame:CGRectMake((ScreenWidth - kWvertical(148))/2+kWvertical(22), ScreenHeight - kHvertical(32), kWvertical(148), HScale(2.5))];
+    UserDetail.text = @"我已阅读并同意 服务条款";
+    UserDetail.font = [UIFont systemFontOfSize:kHorizontal(12.f)];
+    UserDetail.textColor = [UIColor lightGrayColor];
+    
+    NSMutableAttributedString *attributed1 = [[NSMutableAttributedString alloc]initWithString:UserDetail.text];
+    [attributed1 addAttribute:NSForegroundColorAttributeName value:localColor range:NSMakeRange(attributed1.length-4, 4)];
+    UserDetail.attributedText = attributed1;
+    [self.view addSubview:UserDetail];
+    [UserDetail sizeToFit];
+    
+    
+    UIImageView *imageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"agree_regist"]];
+    imageView.frame = CGRectMake(UserDetail.x-kWvertical(22), ScreenHeight - kHvertical(32), kWvertical(17), kWvertical(17));
+    [self.view addSubview:imageView];
+    
+    UIButton *Detail = [[UIButton alloc] initWithFrame:CGRectMake((ScreenWidth - kWvertical(170))/2, UserDetail.y, kWvertical(170), kHvertical(18))];
+    [Detail addTarget:self action:@selector(userDetail:) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:Detail];
+
+    
+}
+-(UIImage *)imageWithColor:(UIColor *)color{
+    CGRect rect = CGRectMake(0.0f, 0.0f, 1.0f, 1.0f);
+    UIGraphicsBeginImageContext(rect.size);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    CGContextSetFillColorWithColor(context, [color CGColor]);
+    CGContextFillRect(context, rect);
+    
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndPDFContext();
+    
+    return image;
+}
+-(void)alertShowView:(NSString *)str{
+    
+    SucessView *sView = [[SucessView alloc] initWithFrame:CGRectMake(WScale(37.1), HScale(44.7), WScale(26.1), HScale(10.8)) imageImageName: @"失败" descStr: str];
+    [self.view addSubview:sView];
+    dispatch_time_t delayTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0/*延迟执行时间*/ * NSEC_PER_SEC));
+    
+    dispatch_after(delayTime, dispatch_get_main_queue(), ^{
+        [sView removeFromSuperview];
+    });
+    
+}
+#pragma mark - 点击事件
+-(void)userDetail:(id)sender{
+    UserDetailViewController *uvc = [[UserDetailViewController alloc] init];
+    uvc.urlStr = [NSString stringWithFormat:@"%@Golvon/jsp/FuWuXieYI.jsp",urlHeader120];
+    uvc.loginStyle = @"1";
+    uvc.isShare = @"1";
+    uvc.titleStr = @"用户协议";
+    [self presentViewController:uvc animated:YES completion:nil];
+
+}
+
+-(void)ClickCode{
+    
+    self.codeBtn.enabled = NO;
+    // 检测用户名
+    __weak typeof(self) weakself = self;
+    NSString *username = self.phoneText.text;
+    if (![self validateMobile:username]) {
+        
+        UIAlertView *alert = [[UIAlertView alloc]initWithTitle:@"" message:@"请输入正确的手机号" delegate:self cancelButtonTitle:@"好的" otherButtonTitles:nil];
+        [alert show];
+        _codeBtn.enabled = YES;
+        return;
+    }
+    
+    _HUB1 = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUB1.mode = MBProgressHUDModeIndeterminate;
+    _HUB1.alpha = 0.5;
+    [userDefaults setValue:_phoneText.text forKey:@"phone"];
+    NSDictionary *dict = @{
+                           @"phone":_phoneText.text
+                           };
+    [self.loadData downloadWithUrl:[NSString stringWithFormat:@"%@commonapi.php?func=getcode",apiHeader120] parameters:dict complicate:^(BOOL success, id data) {
+        _HUB1.hidden = YES;
+        if (success) {
+            NSString *code = data[@"code"];
+            [weakself.codeText becomeFirstResponder];
+            if ([code isEqualToString:@"0"]) {
+                
+                weakself.timer = [NSTimer scheduledTimerWithTimeInterval:1 target:self selector:@selector(timeFireMeyhod) userInfo:nil repeats:YES];
+            }else{
+                
+                [weakself alertShowView:@"发送失败"];
+                weakself.codeBtn.enabled = YES;
+            }
+            
+            
+        }else{
+            [weakself alertShowView:@"发送失败"];
+            
+            weakself.codeBtn.enabled = YES;
+        }
+    }];
+    
+    
+    
+}
+//点击进入下一步
+- (void)nextStep{
+    if (_phoneText.text.length == 0) {
+        _comeBtn.userInteractionEnabled = NO;
+        UIAlertView *alert = [[UIAlertView alloc]initWithTitle:@"" message:@"请输入手机号" delegate:self cancelButtonTitle:@"好的" otherButtonTitles:nil];
+        [alert show];
+        return;
+    }
+    // 检测验证码
+    NSString *pwd = self.codeText.text;
+    if (pwd.length == 0) {
+        UIAlertView *alert = [[UIAlertView alloc]initWithTitle:@"" message:@"请输入验证码" delegate:self cancelButtonTitle:@"好的" otherButtonTitles:nil];
+        [alert show];
+        return;
+    }
+    __weak typeof(self) weakself = self;
+    //判断验证码是否超时
+
+    _HUB = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUB.mode = MBProgressHUDModeIndeterminate;
+    _HUB.alpha = 0.5;
+    NSDictionary *dict = @{
+                           @"phone":self.phoneText.text,
+                           @"code":self.codeText.text
+                           };
+    
+    [self.loadData downloadWithUrl:[NSString stringWithFormat:@"%@commonapi.php?func=reglogin",apiHeader120] parameters:dict complicate:^(BOOL success, id data) {
+        _HUB.hidden = YES;
+        _HUB = nil;
+        if (success) {
+            NSString *code = data[@"code"];
+            weakself.nameid = data[@"name_id"];
+            weakself.uid = data[@"uid"];
+            weakself.regstage = data[@"regstage"];
+            
+            if ([code isEqualToString:@"0"]) {
+                
+                if ([weakself.regstage isEqualToString:@"5"]) {
+                    
+                    //获取版本号
+                    NSString *versionKey = @"CFBundleVersion";
+                    //当前使用的版本
+                    NSString *currentVersion = [NSBundle mainBundle].infoDictionary[versionKey];
+                    [userDefaults setObject:currentVersion forKey:versionKey];
+                    
+                    [userDefaults setObject:weakself.nameid forKey:@"name_id"];
+                    [userDefaults setObject:weakself.uid forKey:@"uid"];
+                    [userDefaults setValue:weakself.phoneText.text forKey:@"phone"];
+                    [weakself initData];
+                    
+                    TabBarViewController *tbc = [[TabBarViewController alloc] init];
+                    self.view.window.rootViewController = tbc;
+                    
+                }else if([_regstage isEqualToString:@"0"]){
+                    
+                    SetNicknameViewController *setnick = [[SetNicknameViewController alloc] init];
+                    setnick.hidesBottomBarWhenPushed = YES;
+                    setnick.name_id = weakself.nameid;
+                    [weakself presentViewController:setnick animated:YES completion:nil];
+                    
+                }else if([weakself.regstage isEqualToString:@"1"]){
+                    
+                    ConsummateViewController *setnick = [[ConsummateViewController alloc] init];
+                    setnick.hidesBottomBarWhenPushed = YES;
+                    setnick.name_id = weakself.nameid;
+                    [self presentViewController:setnick animated:YES completion:nil];
+                    
+                }else if([_regstage isEqualToString:@"2"]){
+                    
+                    SignaturesViewController *setnick = [[SignaturesViewController alloc] init];
+                    setnick.hidesBottomBarWhenPushed = YES;
+                    setnick.name_id = self.nameid;
+                    [weakself presentViewController:setnick animated:YES completion:nil];
+                }
+
+            }else if ([code isEqualToString:@"1"]){
+                
+                [weakself alertShowView:@"验证码错误"];
+                return;
+            }else if ([code isEqualToString:@"2"]){
+                
+                [weakself alertShowView:@"添加用户失败"];
+                return;
+            }
+            
+        }else{
+            [weakself alertShowView:@"网络错误"];
+        }
+    }];
+    
+}
+
+//获取验证码
+- (void)timeFireMeyhod{
+    _timeCount--;
+    [_codeBtn setTitle:[NSString stringWithFormat:@"%ldS 后重试",(long)_timeCount] forState:UIControlStateNormal];
+    [_codeBtn setTitleColor:[UIColor lightGrayColor] forState:UIControlStateNormal];
+    
+    if (_timeCount == 0) {
+        _codeBtn.enabled = YES;
+        [_timer invalidate];
+        [_codeBtn setTitle:@"获取验证码" forState:UIControlStateNormal];
+        [_codeBtn setTitleColor:localColor forState:UIControlStateNormal];
+        
+        _codeBtn.enabled = YES;
+        _timeCount = 60;
+        
+    }
+    
+}
+
+
+-(void)pressesBack{
+    
+    [self dismissViewControllerAnimated:YES completion:nil];
+    
+}
+
+//手机号码正则
+- (BOOL)validateMobile:(NSString *)mobile
+{
+    //手机号以13，15，18  14开头，八个 \d 数字字符
+    NSString *phoneRegex = @"^((13[0-9])|(15[^4,\\D])|(18[0,0-9])|(14[0,0-9])|(17[0,0-9]))\\d{8}$";
+    NSPredicate *phoneTest = [NSPredicate predicateWithFormat:@"SELF MATCHES %@",phoneRegex];
+    return [phoneTest evaluateWithObject:mobile];
+}
+#pragma mark ---- textField代理
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string{
+    if (textField == _phoneText) {
+        if (_phoneText.text.length > 0) {
+            _isPhoneStr = YES;
+        }else{
+            _isPhoneStr = NO;
+        }
+        if (_isPhoneStr && _isCodeStr) {
+            _comeBtn.selected = YES;
+        }
+    }else if(textField == _codeText){
+        if (_codeText.text.length > 0) {
+            _isCodeStr = YES;
+        }else{
+            _isCodeStr = NO;
+        }
+        if (_isPhoneStr && _isCodeStr) {
+            _comeBtn.selected = YES;
+        }
+    }
+
+    return YES;
+}
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event{
+    [_codeText resignFirstResponder];
+    [_phoneText resignFirstResponder];
+    if (_codeText.text.length > 0 && _phoneText.text.length > 0) {
+        _isCodeStr = YES;
+        _isPhoneStr = YES;
+        
+        if (_isPhoneStr && _isCodeStr) {
+            _comeBtn.selected = YES;
+        }
+    }
+}
+- (BOOL)shouldAutorotate{
+    return YES;
+}
+
+
+-(void)initData{
+    
+    DownLoadDataSource *loadData = [[DownLoadDataSource alloc] init];
+    
+    NSDictionary *parameters = @{@"name_id":_nameid};
+    
+    [loadData downloadWithUrl:[NSString stringWithFormat:@"%@commonapi.php?func=getui",apiHeader120] parameters:parameters complicate:^(BOOL success, id data) {
+        if (success) {
+            
+            NSDictionary *uiDic = data[@"ui"];
+            
+            DetailHeaderModel *headerModel = [DetailHeaderModel initWithDictionary:uiDic];
+            
+            NSMutableArray *labelArr = uiDic[@"labels"];
+            if (labelArr.count>0) {
+                
+                [userDefaults setValue:labelArr forKey:@"labels"];
+                
+            }
+            
+            if ([headerModel.vid isEqualToString:@"0"]) {
+                
+            }else{
+                
+//                ZhuanFangModel *interviewModel = [ZhuanFangModel paresFromDictionary:uiDic[@"V"]];
+            }
+            
+            
+            [userDefaults setValue:headerModel.sign forKey:@"siignature"];
+            [userDefaults setValue:headerModel.visits forKey:@"access_amount"];
+            [userDefaults setValue:headerModel.completegames forKey:@"changCi"];
+            [userDefaults setValue:headerModel.charity forKey:@"cishan_jiner"];
+            [userDefaults setValue:headerModel.city forKey:@"city"];
+            [userDefaults setValue:headerModel.state forKey:@"examine_state"];
+            [userDefaults setValue:headerModel.befocus forKey:@"follow_number"];        //关注
+            [userDefaults setValue:headerModel.focus forKey:@"attention_number"];       //粉丝
+            [userDefaults setValue:headerModel.gender forKey:@"gender"];
+            [userDefaults setValue:headerModel.vid forKey:@"interview_state"];
+            [userDefaults setValue:headerModel.msgs forKey:@"message_number"];
+            [userDefaults setValue:headerModel.nickname forKey:@"nickname"];
+            [userDefaults setValue:headerModel.avatorpid forKey:@"pic_id"];
+            [userDefaults setValue:headerModel.province forKey:@"province"];
+            [userDefaults setValue:headerModel.year_label forKey:@"age"];
+            [userDefaults setValue:headerModel.avator forKey:@"pic"];
+            [userDefaults setValue:headerModel.cover forKey:@"coverPic"];
+            [userDefaults setValue:headerModel.rodnum forKey:@"polenum"];
+            [userDefaults setValue:headerModel.work_content forKey:@"job"];
+            [userDefaults setValue:headerModel.bird forKey:@"zhuaNiao"];
+            [userDefaults setValue:headerModel.uid forKey:@"uid"];
+            
+            
+        }
+    }];
+}
+
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation{
+    return UIInterfaceOrientationPortrait;
+}
+
+
+-(UIInterfaceOrientationMask)supportedInterfaceOrientations
+{
+    return UIInterfaceOrientationMaskPortrait;
+}
+
+@end

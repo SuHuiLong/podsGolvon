@@ -1,0 +1,311 @@
+//
+//  YearListViewController.m
+//  podsGolvon
+//
+//  Created by apple on 2017/1/17.
+//  Copyright © 2017年 suhuilong. All rights reserved.
+//
+
+#import "YearListViewController.h"
+#import "RankListHeaderView.h"
+#import "RulesModel.h"
+#import "RulesTableViewCell.h"
+#import "SupportViewController.h"
+#import "NewDetailViewController.h"
+
+
+@interface YearListViewController ()<UITableViewDataSource,UITableViewDelegate>
+
+@property (nonatomic, strong) UITableView    *tableview;
+@property (nonatomic, strong) NSMutableArray *yearDataArr;
+@property (nonatomic, strong) DownLoadDataSource   *LoadDataManager;
+@property (nonatomic, strong) RankListHeaderView   *headerView;
+@property (nonatomic, strong) UIView    *placeView;
+@property (nonatomic, strong) MBProgressHUD   *HUD;
+
+@property (nonatomic, strong) RulesModel   *model;
+@property (nonatomic, strong) NSMutableArray   *selfArr;
+@property (copy, nonatomic) NSString *state;        //打球状态
+@property (nonatomic, strong) NSArray   *headerArr;
+
+@end
+
+static NSString *cellID = @"RulesTableViewCell";
+
+@implementation YearListViewController
+-(NSArray *)headerArr{
+    if (!_headerArr) {
+        _headerArr = [NSArray array];
+    }
+    return _headerArr;
+}
+-(NSMutableArray *)yearDataArr{
+    if (!_yearDataArr) {
+        _yearDataArr = [NSMutableArray array];
+    }
+    return _yearDataArr;
+}
+-(DownLoadDataSource *)LoadDataManager{
+    if (!_LoadDataManager) {
+        _LoadDataManager = [[DownLoadDataSource alloc] init];
+    }
+    return _LoadDataManager;
+}
+-(NSMutableArray *)selfArr{
+    if (!_selfArr) {
+        _selfArr = [NSMutableArray array];
+    }
+    return _selfArr;
+}
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleDefault animated:NO];
+    
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self requestYearData];
+//    
+//    double delayInSeconds = 0.5;
+//    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+//    dispatch_after(popTime, dispatch_get_main_queue(), ^{
+//        
+//        [self createTableview];
+//    });
+
+
+}
+
+-(UIStatusBarStyle)preferredStatusBarStyle{
+    
+    return UIStatusBarStyleDefault;
+}
+#pragma mark ---- LoadData
+-(void)requestYearData{
+    if ([_yearDataArr count] > 0) {
+        [_placeView removeFromSuperview];
+        _HUD = nil;
+    }else{
+        [self createProgress];
+    }
+    NSDictionary *parameters = @{@"nameID":userDefaultId,
+                                 @"year":@"all"};
+    [self.LoadDataManager downloadWithUrl:[NSString stringWithFormat:@"%@Golvon/SelectRanking",apiHeader120] parameters:parameters complicate:^(BOOL success, id data) {
+        if (success) {
+            
+            [self.selfArr removeAllObjects];
+            [self.yearDataArr removeAllObjects];
+            self.state = data[@"UserRank"][@"zongChangCi"];
+            if ([self.state integerValue] >0) {
+                RulesModel *model = [RulesModel relayoutWithModel:data[@"UserRank"]];
+                self.model = model;
+                [self.selfArr addObject:model];
+            }
+            NSArray *tempArr = data[@"Ranking"];
+            for (NSDictionary *tempDic in tempArr) {
+                RulesModel *model = [RulesModel relayoutWithModel:tempDic];
+                [self.yearDataArr addObject:model];
+            }
+            if (self.yearDataArr.count>3) {
+                
+                self.headerArr = [self.yearDataArr subarrayWithRange:NSMakeRange(0, 3)];
+                NSIndexSet *indexSet = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, 3)];
+                [self.yearDataArr removeObjectsAtIndexes:indexSet];
+
+            }
+        }
+        [self createHeader:self.headerArr];
+        
+        [_tableview reloadData];
+    }];
+}
+-(void)clickLikeBtnWithModel:(RulesModel *)model{
+    if ([model.name_id isEqualToString:userDefaultId] || [model.name_id isEqualToString:userDefaultUid]) {
+        
+        SupportViewController *support = [[SupportViewController alloc]init];
+        support.hidesBottomBarWhenPushed = YES;
+        
+        [self.navigationController pushViewController:support animated:YES];
+    }
+    NSDictionary *parameter = @{
+                                @"nameID":userDefaultId,
+                                @"rankNameID":model.name_id
+                                };
+    [self.LoadDataManager downloadWithUrl:[NSString stringWithFormat:@"%@Golvon/InsertRankClick",urlHeader120] parameters:parameter complicate:^(BOOL success, id data) {
+        if (success) {
+            
+            if (model.ClickRankStatr == YES) {
+                model.ClickRankStatr = NO;
+            }else{
+                model.ClickRankStatr = YES;
+            }
+            
+            [self requestYearData];
+            [_tableview reloadData];
+            
+        }
+        
+    }];
+
+}
+#pragma mark ---- UI
+-(void)createProgress{
+    _placeView = [[UIView alloc] init];
+    _placeView.backgroundColor = [UIColor whiteColor];
+    _placeView.frame = CGRectMake(0, 0, ScreenWidth, ScreenHeight);
+    [self.view addSubview:_placeView];
+    _HUD = [MBProgressHUD showHUDAddedTo:_placeView animated:YES];
+    _HUD.alpha = 0.5;
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    
+}
+-(void)createHeader:(NSArray *)arr{
+    _headerView = [[RankListHeaderView alloc] initWithFrame:CGRectMake(0, 0, ScreenWidth, kHvertical(200))];
+    [_headerView.championBtn addTarget:self action:@selector(clickFirstLikeBtn:) forControlEvents:UIControlEventTouchUpInside];
+    [_headerView.secondBtn addTarget:self action:@selector(clickSecondLikeBtn:) forControlEvents:UIControlEventTouchUpInside];
+    [_headerView.thirdBtn addTarget:self action:@selector(clickThirdLikeBtn:) forControlEvents:UIControlEventTouchUpInside];
+    
+    [_headerView relayoutHeaderDataWithArrar:arr];
+    
+    [self createTableview];
+
+}
+-(void)createTableview{
+    
+    [_tableview removeFromSuperview];
+    _tableview = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight-64-49) style:UITableViewStyleGrouped];
+    
+    _tableview.tableHeaderView = _headerView;
+    
+    _tableview.tableFooterView = [[UIView alloc]initWithFrame:CGRectZero];
+    [_tableview registerClass:[RulesTableViewCell class] forCellReuseIdentifier:cellID];
+    _tableview.rowHeight = kHvertical(55);
+    _tableview.separatorStyle = false;
+    [_tableview setDelegate:self];
+    [_tableview setDataSource:self];
+    [self.view addSubview:_tableview];
+}
+#pragma mark ---- 点击事件
+-(void)clickFirstLikeBtn:(NSArray *)arr{
+    arr = self.headerArr;
+    RulesModel *model = arr[0];
+    [self clickLikeBtnWithModel:model];
+}
+-(void)clickSecondLikeBtn:(NSArray *)arr{
+    arr = self.headerArr;
+
+    RulesModel *model = arr[1];
+    [self clickLikeBtnWithModel:model];
+}
+
+-(void)clickThirdLikeBtn:(NSArray *)arr{
+    arr = self.headerArr;
+
+    RulesModel *model = arr[2];
+    [self clickLikeBtnWithModel:model];
+}
+-(void)clickOtherLike:(RulesModel *)model{
+    
+        NSDictionary *parameter = @{
+                                    @"nameID":userDefaultId,
+                                    @"rankNameID":model.name_id
+                                    };
+        [self.LoadDataManager downloadWithUrl:[NSString stringWithFormat:@"%@Golvon/InsertRankClick",urlHeader120] parameters:parameter complicate:^(BOOL success, id data) {
+            if (success) {
+                
+//                NSNumberFormatter *num = [[NSNumberFormatter alloc]init];
+//                self.likeState = data[@"data"][0][@"code"];
+//                NSString *str = [num stringFromNumber:_likeState];
+//                
+//                if ([str isEqualToString:@"1"]) {
+//                    
+//                }
+//                
+                
+            }
+        }];
+}
+#pragma mark ---- tableView delegate
+-(UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    if (section == 0) {
+        
+        UIView *headerview = [[UIView alloc] initWithFrame:CGRectMake(0, 0, ScreenWidth, kHvertical(30))];
+        UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(kWvertical(13), 0, kWvertical(30), kHvertical(30))];
+        title.text = @"全部";
+        title.font = [UIFont systemFontOfSize:kHorizontal(13)];
+        title.textColor = GPColor(123, 123, 123);
+        [headerview addSubview:title];
+        
+        UILabel *chang = [[UILabel alloc] initWithFrame:CGRectMake(kWvertical(274), 0, kWvertical(30), kHvertical(30))];
+        chang.text = @"场次";
+        chang.font = [UIFont systemFontOfSize:kHorizontal(13)];
+        chang.textColor = GPColor(123, 123, 123);
+        [headerview addSubview:chang];
+        
+        UILabel *like = [[UILabel alloc] initWithFrame:CGRectMake(ScreenWidth-kWvertical(44), 0, kWvertical(30), kHvertical(30))];
+        like.text = @"点赞";
+        like.font = [UIFont systemFontOfSize:kHorizontal(13)];
+        like.textColor = GPColor(123, 123, 123);
+        [headerview addSubview:like];
+        return headerview;
+        
+    }
+    return nil;
+}
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    RulesTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID forIndexPath:indexPath];
+    if (indexPath.section == 0) {
+        [cell relayoutWithModel:self.selfArr[0]];
+        cell.lickBtnBlock = ^(RulesModel *model){
+            [self clickLikeBtnWithModel:model];
+        };
+        return cell;
+    }
+    [cell relayoutWithModel:self.yearDataArr[indexPath.row]];
+    cell.lickBtnBlock = ^(RulesModel *model){
+        [self clickLikeBtnWithModel:model];
+    };
+    return cell;
+}
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    if (section == 0) {
+        return 1;
+    }
+    return _yearDataArr.count;
+}
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 2;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    if (section == 0) {
+        return kHvertical(30);
+    }
+    return kHvertical(3);
+}
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:NO];
+    if (indexPath.section == 0) {
+        RulesModel *model = self.selfArr[indexPath.row];
+        NewDetailViewController *VC = [[NewDetailViewController alloc] init];
+        VC.nameID = model.name_id;
+        VC.hidesBottomBarWhenPushed = YES;
+        [VC setBlock:^(BOOL isback) {
+            
+        }];
+        [self.navigationController pushViewController:VC animated:YES];
+    }else{
+        RulesModel *model = self.yearDataArr[indexPath.row];
+        NewDetailViewController *VC = [[NewDetailViewController alloc] init];
+        VC.nameID = model.name_id;
+        VC.hidesBottomBarWhenPushed = YES;
+        [VC setBlock:^(BOOL isback) {
+            
+        }];
+        [self.navigationController pushViewController:VC animated:YES];
+    }
+}
+
+
+
+@end

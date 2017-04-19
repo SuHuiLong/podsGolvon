@@ -1,0 +1,440 @@
+//
+//  DZ_ViewController.m
+//  Golvon
+//
+//  Created by 李盼盼 on 16/3/22.
+//  Copyright © 2016年 李盼盼. All rights reserved.
+//
+
+#import "DZ_ViewController.h"
+#import "DZ_TableViewCell.h"
+#import "dianZanModel.h"
+#import "ScoreCardViewController.h"
+#import "AppDelegate.h"
+#import "SimpleInterest.h"
+#import "NSObject+YYModel.h"
+#import "NewZhuanFangViewController.h"
+#import "RespondDetailViewController.h"
+
+
+NSString *const supportNameID = @"supportNameID";
+@interface DZ_ViewController ()<UITableViewDataSource,UITableViewDelegate>
+{
+    
+    MBProgressHUD *_HUB;
+    
+}
+@property (strong, nonatomic) NSMutableArray     *zanData;
+@property (strong, nonatomic) DownLoadDataSource *loadData;
+
+@property (copy, nonatomic) NSString           *messageId;
+@property (copy, nonatomic) NSString           *messageType;
+
+@property (copy, nonatomic) NSString    *deleID;        //要删除的ID
+
+@property (assign, nonatomic) int          curragePage;
+@property (assign, nonatomic) int          allPage;
+@property (assign, nonatomic) int          row;
+@property (assign, nonatomic) UIEdgeInsets insets;
+@end
+
+@implementation DZ_ViewController
+-(NSMutableArray *)zanData{
+    if (!_zanData) {
+        _zanData = [[NSMutableArray alloc]init];
+    }
+    return _zanData;
+    
+}
+-(DownLoadDataSource *)loadData{
+    if (!_loadData) {
+        _loadData = [[DownLoadDataSource alloc]init];
+    }
+    return _loadData;
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBarHidden = NO;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    _curragePage = 0;
+    [self testNetState];
+    [self createNav];
+    [self createUI];
+    self.view.backgroundColor = WhiteColor;
+    self.insets = UIEdgeInsetsMake(0, kWvertical(60), 0, 0);
+}
+-(void)viewDidLayoutSubviews{
+    
+    if ([self.tableView respondsToSelector:@selector(setSeparatorInset:)]) {
+        [self.tableView setSeparatorInset:self.insets];
+    }
+    if ([self.tableView respondsToSelector:@selector(setLayoutMargins:)])  {
+        [self.tableView setLayoutMargins:self.insets];
+    }
+}
+-(void)testNetState{
+    AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
+    [manager.reachabilityManager setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status) {
+//        AppDelegate *appdele = [UIApplication sharedApplication].delegate;
+//        appdele.reachAbilety = status > 0;
+        if (status == AFNetworkReachabilityStatusNotReachable) {
+            
+            [self alertShowView:@"网络连接失败"];
+        }else{
+            [self requestDianZan];
+        }
+    }];
+    
+    [manager.reachabilityManager startMonitoring];
+}
+//提示界面
+-(void)alertShowView:(NSString *)str{
+    
+    SucessView *sView = [[SucessView alloc] initWithFrame:CGRectMake(WScale(37.1), HScale(44.7), WScale(26.1), HScale(10.8)) imageImageName: @"失败" descStr: str];
+    [self.view addSubview:sView];
+    dispatch_time_t delayTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0/*延迟执行时间*/ * NSEC_PER_SEC));
+    
+    dispatch_after(delayTime, dispatch_get_main_queue(), ^{
+        [sView removeFromSuperview];
+    });
+    
+}
+#pragma mark ---- UI
+-(void)createNav{
+    
+    
+    self.navigationItem.title = @"点赞";
+    [self.navigationController.navigationBar setTitleTextAttributes:@{NSFontAttributeName:[UIFont boldSystemFontOfSize:kHorizontal(18)],NSForegroundColorAttributeName:deepColor}];
+
+    UIBarButtonItem *leftBarbutton = [[UIBarButtonItem alloc] initWithTitle:@"" style:UIBarButtonItemStylePlain target:self action:@selector(pushBack)];
+    leftBarbutton.tintColor = [UIColor blackColor];
+    [leftBarbutton setImage:[UIImage imageNamed:@"返回"]];
+    self.navigationItem.leftBarButtonItem = leftBarbutton;
+    
+}
+
+-(void)createNoneView{
+    
+    _tableView.hidden = YES;
+    _label = [[UILabel alloc] init];
+    _label.frame = CGRectMake(0, kHvertical(123), ScreenWidth, kHvertical(27));
+    _label.text = @"您还没有收到点赞";
+    _label.textAlignment = NSTextAlignmentCenter;
+    _label.font = [UIFont systemFontOfSize:kHorizontal(16)];
+    _label.textColor = textTintColor;
+    [self.view addSubview:_label];
+}
+
+-(void)createUI{
+    
+    _tableView = [[UITableView alloc]initWithFrame: CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+    _tableView.dataSource = self;
+    _tableView.delegate = self;
+    [_tableView registerClass:[DZ_TableViewCell class] forCellReuseIdentifier:@"DZ_TableViewCell"];
+    _tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    [self.view addSubview:_tableView];
+    [self createRefresh];
+}
+
+#pragma mark ---- 查询数据
+- (void)requestDianZan{
+    __weak typeof(self) weakself = self;
+    _HUB = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUB.mode = MBProgressHUDModeIndeterminate;
+    _HUB.alpha = 0.5;
+    
+    NSDictionary *parameters = @{@"name_id":userDefaultId,
+                                 @"page":@(_curragePage)
+                                 };
+    
+    NSString *path = [NSString stringWithFormat:@"%@msgapi.php?func=getclicks",apiHeader120];
+    NSString *url = [path stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    
+    [self.loadData downloadWithUrl:url parameters:parameters complicate:^(BOOL success, id data) {
+        _HUB.hidden = YES;
+        _HUB = nil;
+        if (success) {
+            NSArray *tempArr = data[@"data"];
+            weakself.allPage = [data[@"pages"] intValue];
+                        
+            for (NSDictionary *tempDic in tempArr) {
+                
+                dianZanModel *model = [dianZanModel modelWithDictionary:tempDic];
+                
+                [weakself.zanData addObject:model];
+            }
+            [_tableView reloadData];
+            if (weakself.allPage == 0) {
+                [weakself createNoneView];
+            }
+        }else{
+            [weakself alertShowView:@"网络错误"];
+        }
+        
+    }];
+    
+}
+
+-(void)createRefresh{
+    MJRefreshNormalHeader *refreshHeader = [MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(headerRefreshWithLikemessage)];
+    self.tableView.mj_header = refreshHeader;
+    
+    MJRefreshBackNormalFooter *refreshFooter = [MJRefreshBackNormalFooter footerWithRefreshingTarget:self refreshingAction:@selector(footerRefreshWithLikemessage)];
+    self.tableView.mj_footer = refreshFooter;
+    
+}
+
+-(void)headerRefreshWithLikemessage{
+    _curragePage = 0;
+    [self.tableView.mj_footer resetNoMoreData];
+    __weak typeof(self) weakself = self;
+    NSDictionary *parameters = @{@"name_id":userDefaultId,
+                                 @"page":@(_curragePage)};
+    NSString *path = [NSString stringWithFormat:@"%@msgapi.php?func=getclicks",apiHeader120];
+    NSString *url = [path stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    [self.loadData downloadWithUrl:url parameters:parameters complicate:^(BOOL success, id data) {
+        
+        [self.tableView.mj_header endRefreshing];
+        if (success) {
+            NSArray *arr = data[@"data"];
+            weakself.allPage = [data[@"pages"] intValue];
+            [self.zanData removeAllObjects];
+            for (NSDictionary *temp in arr) {
+                dianZanModel *model = [dianZanModel modelWithDictionary:temp];
+                [weakself.zanData addObject:model];
+            }
+            [weakself.tableView reloadData];
+            
+        }else{
+            [weakself alertShowView:@"网络错误"];
+        }
+        
+    }];
+}
+-(void)footerRefreshWithLikemessage{
+    _curragePage++;
+    if (_curragePage>_allPage) {
+        _curragePage--;
+        [self.tableView.mj_footer endRefreshingWithNoMoreData];
+        return;
+    }
+    NSDictionary *parameters = @{@"name_id":userDefaultId,
+                                 @"page":@(_curragePage)
+                                 };
+    __weak typeof(self) weakself = self;
+    NSString *path = [NSString stringWithFormat:@"%@msgapi.php?func=getclicks",apiHeader120];
+    NSString *url = [path stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    [self.loadData downloadWithUrl:url parameters:parameters complicate:^(BOOL success, id data) {
+        [self.tableView.mj_footer endRefreshing];
+        if (success) {
+            NSArray *arr = data[@"data"];
+            weakself.allPage = [data[@"pages"] intValue];
+            for (NSDictionary *temp in arr) {
+                dianZanModel *model = [dianZanModel modelWithDictionary:temp];
+                [weakself.zanData addObject:model];
+            }
+            [weakself.tableView reloadData];
+            
+        }else{
+            [weakself alertShowView:@"网络错误"];
+        }
+        
+    }];
+}
+#pragma mark ---- 代理
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _zanData.count;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    dianZanModel *model = _zanData[indexPath.row];
+    
+    /***  消息的类型 1：专访，2：评论，3：榜单，4：动态*/
+    if ([model.type isEqualToString:@"1"]) {
+        
+        CGSize titleSize = [model.vtitle boundingRectWithSize:CGSizeMake(WScale(67.7), MAXFLOAT) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:kHorizontal(13)]} context:nil].size;
+        
+        if (titleSize.height + kHvertical(35) < kHvertical(65)) {
+            return kHvertical(65);
+        }
+        return titleSize.height + kHvertical(35) + kHorizontal(12);
+    }else if ([model.type isEqualToString:@"2"]){
+//        CGSize titleSize = [model.comment_content boundingRectWithSize:CGSizeMake(WScale(67.7), MAXFLOAT) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:kHorizontal(13)]} context:nil].size;
+//        
+//        if (titleSize.height + kHvertical(35) < kHvertical(65)) {
+//            return kHvertical(65);
+//        }
+//        return titleSize.height + kHvertical(35) + kHorizontal(12);
+        
+    }else if ([model.type isEqualToString:@"4"]){
+        
+        if ([model.hascontent isEqualToString:@"1"]) {
+            CGSize titleSize = [model.dcontent boundingRectWithSize:CGSizeMake(kWvertical(303), MAXFLOAT) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:kHorizontal(12)]} context:nil].size;
+            
+            if (titleSize.height + kHvertical(35) < kHvertical(65)) {
+                return kHvertical(65);
+            }
+            return titleSize.height + kHvertical(35) + kHorizontal(12);
+        }else{
+            
+            return HScale(14.5);
+        }
+    }
+    return kHvertical(65);
+}
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    self.tableView.separatorColor = GPColor(242, 242, 242);
+    DZ_TableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"DZ_TableViewCell"];
+    
+    cell.imageViewO.hidden = YES;
+    cell.imageViewT.hidden = YES;
+    cell.imageViewS.hidden = YES;
+    dianZanModel *model = _zanData[indexPath.row];
+    
+    if ([model.type isEqualToString:@"4"]) {
+        if ([model.hascontent isEqualToString:@"0"]) {
+            cell.imageViewO.hidden = NO;
+            cell.imageViewT.hidden = NO;
+            cell.imageViewS.hidden = NO;
+        }
+    }
+     if ([model.type isEqualToString:@"3"]){
+         
+     }else{
+         
+         cell.selectionStyle = UITableViewCellSelectionStyleNone;
+     }
+   
+    __weak typeof(self) weakSelf = self;
+    cell.ClickHeaderBlock = ^(dianZanModel *model){
+        
+        [weakSelf clickToHeader:model];
+    };
+    cell.ClickNickNameBlock = ^(dianZanModel *model){
+        [weakSelf clickToHeader:model];
+    };
+    [cell realyoutWithModel:_zanData[indexPath.row]];
+    
+    return cell;
+}
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    [self.tableView deselectRowAtIndexPath:[_tableView indexPathForSelectedRow] animated:YES];
+    dianZanModel *model = _zanData[indexPath.row];
+    NewDetailViewController *vc = [[NewDetailViewController alloc] init];
+    AidViewController *aid = [[AidViewController alloc]init];
+    
+    /***  消息的类型 1：专访，2：评论，3：榜单，4：动态*/
+    if ([model.type isEqualToString:@"3"]) {
+        
+        if ([model.isrank isEqualToString:@"0"]) {
+            
+            if ([model.uid isEqualToString:@"usergolvon"]) {
+                [aid setBlock:^(BOOL isView) {
+                    
+                }];
+                [self.navigationController pushViewController:aid animated:YES];
+                
+            }else if(![model.uid isEqualToString:userDefaultUid]){
+                
+                vc.nameID = model.uid;
+                [vc setBlock:^(BOOL isback) {
+                    
+                }];
+                [self.navigationController pushViewController:vc animated:YES];
+            }
+        }else{
+            
+            __block NSUInteger rankVCIndex = self.tabBarController.selectedIndex;
+            NSArray<UINavigationController *> *navVCArray = self.tabBarController.viewControllers;
+            
+            [navVCArray enumerateObjectsUsingBlock:^(UINavigationController * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                
+                if ([[obj.viewControllers firstObject] isKindOfClass:[ScoreCardViewController class]])  {
+                    rankVCIndex = idx;
+                }
+            }];
+            
+            SimpleInterest *manger = [SimpleInterest sharedSingle];
+            manger.supportNameID = [[NSMutableString alloc]initWithString:model.uid];
+            manger.isFromA = YES;
+            
+            self.tabBarController.selectedIndex = rankVCIndex;
+            
+            [self.navigationController popToRootViewControllerAnimated:YES];
+            
+        }
+        
+    }else if ([model.type isEqualToString:@"4"]){
+        
+        RespondDetailViewController *vc = [[RespondDetailViewController alloc] init];
+        vc.inquireDynamicID = model.did;
+        vc.hidesBottomBarWhenPushed = YES;
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+}
+
+-(void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath*)indexPath{
+    if ([cell respondsToSelector:@selector(setLayoutMargins:)]) {
+        [cell setLayoutMargins:self.insets];
+    }
+    if ([cell respondsToSelector:@selector(setSeparatorInset:)]){
+        [cell setSeparatorInset:self.insets];
+    }
+}
+
+-(void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    if (editingStyle == UITableViewCellEditingStyleDelete) {
+        dianZanModel *model = _zanData[indexPath.row];
+        NSDictionary *parameters = @{@"name_id":userDefaultId,
+                                     @"clickid":model.clickid};
+        __weak typeof(self) weakself = self;
+        [self.loadData downloadWithUrl:[NSString stringWithFormat:@"%@msgapi.php?func=delclick",apiHeader120] parameters:parameters complicate:^(BOOL success, id data) {
+            if (success) {
+                
+                NSString *code = data[@"code"];
+                if ([code isEqualToString:@"0"]) {
+                    
+                    [weakself.zanData removeObjectAtIndex:indexPath.row];
+                }
+                
+                [weakself.tableView reloadData];
+    
+            }
+        }];
+        
+    }
+}
+#pragma mark ---- 点击事件
+
+-(void)pushBack{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+-(void)clickToHeader:(dianZanModel *)model{
+    NewDetailViewController *VC = [[NewDetailViewController alloc] init];
+    AidViewController *aid = [[AidViewController alloc]init];
+    __weak typeof(self) weakself = self;
+    if ([model.uid isEqualToString:@"usergolvon"]) {
+        [aid setBlock:^(BOOL isView) {
+            
+        }];
+        [weakself.navigationController pushViewController:aid animated:YES];
+        
+    }else{
+        VC.hidesBottomBarWhenPushed = YES;
+        VC.nameID = model.uid;
+        [VC setBlock:^(BOOL isback) {
+            
+        }];
+        [weakself.navigationController pushViewController:VC animated:YES];
+    }
+    
+}
+
+@end

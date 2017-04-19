@@ -1,0 +1,287 @@
+
+
+//
+//  AddByAddressBookViewController.m
+//  podsGolvon
+//
+//  Created by SHL on 2016/12/27.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "AddByAddressBookViewController.h"
+#import <ContactsUI/ContactsUI.h>
+#import "GolfersTableViewCell.h"
+#import "AddressListModel.h"
+
+@interface AddByAddressBookViewController ()<CNContactPickerDelegate,UITableViewDelegate,UITableViewDataSource,MBProgressHUDDelegate>
+//本地联系人数组
+@property (nonatomic,strong)NSMutableArray *dataArray;
+//tableview
+@property (nonatomic,copy)UITableView *mainTableView;
+//创建HUD
+@property (nonatomic,copy)MBProgressHUD *HUD;
+@end
+
+@implementation AddByAddressBookViewController
+
+-(NSMutableArray *)dataArray{
+    if (_dataArray == nil) {
+        _dataArray = [NSMutableArray array];
+    }
+    return _dataArray;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+}
+#pragma mark - createView
+-(void)createView{
+    [self createTableView];
+}
+//创建tableview
+-(void)createTableView{
+    UITableView *mainTableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 64 + kHvertical(45), ScreenWidth, ScreenHeight-64-kHvertical(45))];
+    mainTableView.dataSource = self;
+    mainTableView.delegate = self;
+    [mainTableView registerClass:[GolfersTableViewCell class] forCellReuseIdentifier:@"GolfersTableViewCell"];
+    mainTableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    
+    [self.view addSubview:mainTableView];
+    _mainTableView = mainTableView;
+}
+//创建HUD
+-(void)createHUD{
+    
+//    _HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+//    _HUD.mode = MBProgressHUDModeIndeterminate;
+//    _HUD.delegate = self;
+//    _HUD.label.text = @"加载中...";
+}
+
+#pragma mark - loadData
+-(void)initData{
+    // 1.获取授权状态
+    CNAuthorizationStatus status = [CNContactStore authorizationStatusForEntityType:CNEntityTypeContacts];
+    //     2.判断授权状态,如果不是已经授权,则直接返回    
+    if (status == CNAuthorizationStatusNotDetermined) {
+        [[[CNContactStore alloc]init] requestAccessForEntityType:CNEntityTypeContacts completionHandler:^(BOOL granted, NSError * _Nullable error) {
+            if(granted){
+                [self createHUD];
+
+                NSLog(@"选择了同意");
+                
+                
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                    // 耗时的操作
+                    [self loadPerson];
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [_mainTableView reloadData];
+                    });
+                });  
+
+            }else{
+                NSLog(@"拒绝了");
+            }
+        }];
+        
+    }else if (status == CNAuthorizationStatusAuthorized){
+        [self createHUD];
+
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            // 耗时的操作
+            [self loadPerson];
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [_mainTableView reloadData];
+
+            });
+        });
+        
+        
+    }else {
+        // 弹窗显示
+    }
+}
+
+- (void)loadPerson
+{
+        // 3.创建通信录对象
+        CNContactStore *contactStore = [[CNContactStore alloc] init];
+        
+        // 4.创建获取通信录的请求对象
+        // 4.1.拿到所有打算获取的属性对应的key
+        NSArray *keys = @[CNContactGivenNameKey, CNContactFamilyNameKey, CNContactPhoneNumbersKey];
+        
+        // 4.2.创建CNContactFetchRequest对象
+        CNContactFetchRequest *request = [[CNContactFetchRequest alloc] initWithKeysToFetch:keys];
+        NSMutableArray *totalDataArray = [NSMutableArray array];
+        
+        // 5.遍历所有的联系人
+        [contactStore enumerateContactsWithFetchRequest:request error:nil usingBlock:^(CNContact * _Nonnull contact, BOOL * _Nonnull stop) {
+            // 1.获取联系人的姓名
+            NSString *lastname = [NSString stringWithFormat:@"%@%@",contact.familyName,contact.givenName];
+            // 2.获取联系人的电话号码
+            NSArray *phoneNums = contact.phoneNumbers;
+            
+            for (CNLabeledValue *labeledValue in phoneNums) {
+                // 2.1.获取电话号码的KEY
+                NSString *phoneLabel = labeledValue.label;
+                // 2.2.获取电话号码
+                CNPhoneNumber *phoneNumer = labeledValue.value;
+                NSString *phoneValue = phoneNumer.stringValue;
+                
+                if ([phoneLabel isEqualToString:@"_$!<Mobile>!$_"]) {
+                    AddressListModel *model = [[AddressListModel alloc] init];
+                    model.nickName = lastname;
+                    model.phoneNumber = phoneValue;
+                    model.isSelect = false;
+                    NSLog(@"%@",lastname);
+                    [totalDataArray addObject:model];
+                }
+            }
+        }];
+        [self sortData:totalDataArray];
+
+
+}
+
+//数组排序
+-(void)sortData:(NSMutableArray *)mArray{
+    //首字母相同的联系人数组
+    NSMutableArray *indexDataArray = [NSMutableArray array];
+    //联系人首字母
+    NSString *indexFristStr = [NSString string];
+
+    for (int i = 0; i<mArray.count; i++) {
+        AddressListModel *model = mArray[i];
+        NSString *fristStr = [self firstCharactor:model.nickName];
+        NSLog(@"%@",fristStr);
+        if (i==0) {
+            indexFristStr = fristStr;
+            [indexDataArray addObject:model];
+        }else if ([indexFristStr isEqualToString:fristStr]) {
+            [indexDataArray addObject:model];
+        }else{
+            indexFristStr = fristStr;
+            [self.dataArray addObject:indexDataArray];
+            indexDataArray = [NSMutableArray arrayWithObject:model];
+        }
+    }
+    if (indexDataArray.count>0) {
+        [self.dataArray addObject:indexDataArray];
+    }
+    
+    
+//
+
+
+}
+
+
+#pragma mark - TableViewDelegate;
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+
+    return _dataArray.count;
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    
+    NSArray *sectionArray = _dataArray[section];
+    return sectionArray.count;
+}
+
+
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return kHvertical(45);
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return kHvertical(30);
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    GolfersTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"GolfersTableViewCell" forIndexPath:indexPath];
+    [cell.selectBtn addTarget:self action:@selector(selectBtnClick:) forControlEvents:UIControlEventTouchUpInside];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    NSArray *sectionArray = _dataArray[indexPath.section];
+    [cell configAddressModel:sectionArray[indexPath.row]];
+
+    return cell;
+    
+}
+
+
+-(UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    
+    NSArray *sectionArray = _dataArray[section];
+    
+    UIView *headerView = [Factory createViewWithBackgroundColor:GPColor(238, 239, 241) frame:CGRectMake(0, 0, ScreenWidth, kHvertical(30))];
+    NSString *titleStr = [NSString string];
+    AddressListModel *model = sectionArray[0];
+    titleStr = [self firstCharactor:model.nickName];
+    
+    UILabel *titleLabel = [Factory createLabelWithFrame:CGRectMake(kWvertical(13), 0, ScreenWidth/2, kHvertical(30)) textColor:BlackColor fontSize:kHorizontal(13.0f) Title:titleStr];
+    [titleLabel setFont:[UIFont boldSystemFontOfSize:13.0f]];
+    [headerView addSubview:titleLabel];
+    return headerView;
+}
+
+
+-(NSArray<NSString *> *)sectionIndexTitlesForTableView:(UITableView *)tableView{
+    NSMutableArray *titleArray = [NSMutableArray array];
+    for (int i =0 ; i<_dataArray.count; i++) {
+        AddressListModel *model = _dataArray[i][0];
+        NSString *indexStr = [self firstCharactor:model.nickName];
+        
+        [titleArray addObject:indexStr];
+    }
+    
+    return titleArray;
+    
+}
+
+-(NSInteger)tableView:(UITableView *)tableView sectionForSectionIndexTitle:(NSString *)title atIndex:(NSInteger)index{
+
+    return [[UILocalizedIndexedCollation currentCollation] sectionForSectionIndexTitleAtIndex:index];
+}
+
+#pragma mark - Others
+//获取拼音首字母(传入汉字字符串, 返回大写拼音首字母)
+- (NSString *)firstCharactor:(NSString *)aString
+{
+    //转成了可变字符串
+    NSMutableString *str = [NSMutableString stringWithString:aString];
+    //先转换为带声调的拼音
+    CFStringTransform((CFMutableStringRef)str,NULL, kCFStringTransformMandarinLatin,NO);
+    //再转换为不带声调的拼音
+    CFStringTransform((CFMutableStringRef)str,NULL, kCFStringTransformStripDiacritics,NO);
+    //转化为大写拼音
+    NSString *pinYin = [str capitalizedString];
+    //获取并返回首字母
+    if (pinYin.length>1) {
+        return [pinYin substringToIndex:1];
+    }else if (pinYin.length==1){
+        return pinYin;
+    }
+    return @"#";
+}
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

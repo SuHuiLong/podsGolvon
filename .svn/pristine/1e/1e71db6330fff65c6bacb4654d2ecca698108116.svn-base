@@ -1,0 +1,96 @@
+//
+//  RecomentInterviewCell.m
+//  podsGolvon
+//
+//  Created by apple on 2016/12/8.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "RecomentInterviewCell.h"
+
+@interface RecomentInterviewCell ()
+@end
+@implementation RecomentInterviewCell
+
+-(instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        
+        [self createCell];
+    }
+    return self;
+}
+-(void)createCell{
+    _typeLabel = [[UILabel alloc] init];
+    _typeLabel.frame = CGRectMake(kWvertical(12), 0, kWvertical(70), kHvertical(40));
+    _typeLabel.text = @"专访推荐";
+    _typeLabel.font = [UIFont boldSystemFontOfSize:kHorizontal(14)];
+    [self.contentView addSubview:_typeLabel];
+    
+    UIImageView *clickIcon = [[UIImageView alloc] init];
+    clickIcon.frame = CGRectMake(ScreenWidth - kWvertical(20), kHvertical(17), kWvertical(4), kHvertical(7));
+    clickIcon.image = [UIImage imageNamed:@"RightSelected"];
+    [self.contentView addSubview:clickIcon];
+    
+    UILabel *moreLabel = [[UILabel alloc] init];
+    moreLabel.frame = CGRectMake(clickIcon.left - kWvertical(32), kHvertical(12), kWvertical(30), kHvertical(16));
+    moreLabel.text = @"更多";
+    moreLabel.textColor = localColor;
+    moreLabel.textAlignment = NSTextAlignmentRight;
+    moreLabel.font = [UIFont systemFontOfSize:kHorizontal(11)];
+    [self.contentView addSubview:moreLabel];
+    for (int i = 0; i<3; i++) {
+        UIImageView *coverImage = [[UIImageView alloc] init];
+        coverImage.frame = CGRectMake(i*(kWvertical(12)+kWvertical(109))+kWvertical(12), _typeLabel.bottom, kWvertical(109), kHvertical(141));
+        coverImage.tag = 1000+i;
+        [self.contentView addSubview:coverImage];
+        
+        UILabel *nicknameLabel = [[UILabel alloc] initWithFrame:CGRectMake(coverImage.left, coverImage.bottom + kHvertical(17), coverImage.width, kHvertical(17))];
+        nicknameLabel.textColor = deepColor;
+        nicknameLabel.font = [UIFont systemFontOfSize:kHorizontal(12)];
+        nicknameLabel.tag = 1100+i;
+        [self.contentView addSubview:nicknameLabel];
+        
+         UILabel *visitorLabel = [[UILabel alloc] initWithFrame:CGRectMake(nicknameLabel.left, nicknameLabel.bottom, coverImage.width, kHvertical(14))];
+        visitorLabel.textColor = textTintColor;
+        visitorLabel.font = [UIFont systemFontOfSize:kHorizontal(10)];
+        visitorLabel.tag = 1200+i;
+        [self.contentView addSubview:visitorLabel];
+        
+        UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+        [btn addTarget:self action:@selector(pressBtn:) forControlEvents:UIControlEventTouchUpInside];
+        btn.tag = 1300 + i;
+        btn.frame = CGRectMake(i*(kWvertical(12)+kWvertical(109))+kWvertical(12), _typeLabel.bottom, kWvertical(109), kHvertical(198));
+        [self.contentView addSubview:btn];
+        
+    }
+
+    
+}
+-(void)relayoutDataWithArr:(NSMutableArray *)modelArr{
+    int i=0;
+    for (RecomInteModel *model in modelArr) {
+        
+        UIImageView *pic = (UIImageView *)[self viewWithTag:1000+i];
+        [pic sd_setImageWithURL:[NSURL URLWithString:model.pic]];
+        
+        UILabel *nick = (UILabel *)[self viewWithTag:1100+i];
+        nick.text = model.nickname;
+        
+        UILabel *read = (UILabel *)[self viewWithTag:1200+i];
+        read.text = [NSString stringWithFormat:@"%@看过",model.readnum];
+        
+        _button = (UIButton *)[self viewWithTag:1300+i];
+        _button.backgroundColor = [UIColor colorWithRed:arc4random()%255/256.0f green:arc4random()%255/256.0f blue:arc4random()%255/256.0f alpha:0.5f];
+        i++;
+    }
+
+}
+-(void)pressBtn:(UIButton *)sender{
+    _block(sender.tag);
+    NSLog(@"点了%ld按钮",sender.tag);
+}
+-(void)setBlock:(BtnBlock)block{
+    _block = block;
+}
+@end

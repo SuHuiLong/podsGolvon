@@ -1,0 +1,80 @@
+//
+//  InterviewViewController.m
+//  FindModule
+//
+//  Created by apple on 2016/12/1.
+//  Copyright © 2016年 apple. All rights reserved.
+//
+
+#import "InterviewViewController.h"
+#import "InterviewTableViewCell.h"
+#import "ChildInterviewModel.h"
+
+@interface InterviewViewController ()<UITableViewDelegate,UITableViewDataSource>
+
+@property (nonatomic, strong) UITableView   *tableview;
+@property (nonatomic, strong) NSMutableArray   *interViewDataArr;
+@property (nonatomic, strong) DownLoadDataSource   *loadDataManager;
+
+@end
+
+static NSString *cellID = @"InterviewTableViewCell";
+
+@implementation InterviewViewController
+-(NSMutableArray *)interViewDataArr{
+    if (!_interViewDataArr) {
+        _interViewDataArr = [NSMutableArray array];
+    }
+    return _interViewDataArr;
+}
+-(DownLoadDataSource *)loadDataManager{
+    if (!_loadDataManager) {
+        _loadDataManager = [[DownLoadDataSource alloc] init];
+    }
+    return _loadDataManager;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self createUI];
+    [self requesInterviewData];
+}
+
+#pragma mark ---- UI
+-(void)createUI{
+    
+    _tableview = [[UITableView alloc] initWithFrame:CGRectMake(0, 102, ScreenWidth, ScreenHeight - 102 -49)];
+    _tableview.rowHeight = kHvertical(257);
+    [_tableview setDelegate:self];
+    [_tableview setDataSource:self];
+    _tableview.separatorStyle = NO;
+    [_tableview registerClass:[InterviewTableViewCell class] forCellReuseIdentifier:cellID];
+    [self.view addSubview:_tableview];
+    
+}
+
+#pragma mark ---- loadData
+-(void)requesInterviewData{
+    
+    [self.loadDataManager downloadWithUrl:[NSString stringWithFormat:@"%@cao/findapi.php?findkey=inteall",urlHeader120] parameters:nil complicate:^(BOOL success, id data) {
+        if (success) {
+            NSArray *tempArr = data;
+            for (NSDictionary *tempDic in tempArr) {
+                ChildInterviewModel *model = [ChildInterviewModel modelWithDictionary:tempDic];
+                [self.interViewDataArr addObject:model];
+            }
+            [self.tableview reloadData];
+        }
+    }];
+}
+#pragma mark ---- UITableViewDelegate && UITableViewDataSource
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.interViewDataArr.count;
+}
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    InterviewTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID forIndexPath:indexPath];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    [cell relayoutInterviewDataWithModel:self.interViewDataArr[indexPath.row]];
+    return cell;
+}
+
+@end

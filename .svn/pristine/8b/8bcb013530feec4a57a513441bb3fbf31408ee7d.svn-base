@@ -1,0 +1,22 @@
+//
+//  RecomInformModel.h
+//  podsGolvon
+//
+//  Created by apple on 2016/12/27.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "ChildRecomModel.h"
+#import "RecomInteModel.h"
+
+@interface RecomInformModel : NSObject
+
+@property (copy, nonatomic) NSString *conent;
+@property (copy, nonatomic) NSString *pic;
+@property (copy, nonatomic) NSString *sm_idd;
+@property (copy, nonatomic) NSString *title;
+@property (copy, nonatomic) NSString *url;
+
++(RecomInformModel *)modelAddDictionary:(NSDictionary *)dic;
+@end

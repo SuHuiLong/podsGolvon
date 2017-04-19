@@ -1,0 +1,22 @@
+//
+//  RecomInformModel.m
+//  podsGolvon
+//
+//  Created by apple on 2016/12/27.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "RecomInformModel.h"
+
+@implementation RecomInformModel
+
++(RecomInformModel *)modelAddDictionary:(NSDictionary *)dic{
+    RecomInformModel *model = [[RecomInformModel alloc] init];
+    model.content = dic[@"content"];
+    model.pic = dic[@"pic"];
+    model.sm_idd = dic[@"sm_idd"];
+    model.title = dic[@"title"];
+    model.url = dic[@"url"];
+    return model;
+}
+@end

@@ -1,0 +1,59 @@
+//
+//  RankListHeaderView.m
+//  podsGolvon
+//
+//  Created by apple on 2017/1/13.
+//  Copyright © 2017年 suhuilong. All rights reserved.
+//
+
+#import "RankListHeaderView.h"
+
+@implementation RankListHeaderView
+
+-(instancetype)initWithFrame:(CGRect)frame{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self createUI];
+        self.backgroundColor = WhiteColor;
+    }
+    return self;
+}
+
+-(void)createUI{
+    
+    _championImageView = [[UIImageView alloc] initWithFrame:CGRectMake(ScreenWidth/2-kWvertical(35), kHvertical(26), kWvertical(70), kWvertical(70))];
+    _championImageView.backgroundColor = localColor;
+    [self addSubview:_championImageView];
+    
+    _secondImageView = [[UIImageView alloc] initWithFrame:CGRectMake(kWvertical(50), kHvertical(36), kWvertical(60), kWvertical(60))];
+    _secondImageView.backgroundColor = localColor;
+    [self addSubview:_secondImageView];
+    
+    _thirdImageView = [[UIImageView alloc] initWithFrame:CGRectMake(ScreenWidth - kWvertical(105), kHvertical(46), kWvertical(50), kWvertical(50))];
+    _thirdImageView.backgroundColor = RedColor;
+    [self addSubview:_thirdImageView];
+    
+    for (NSInteger i = 0; i<3; i++) {
+        
+        UILabel *nicknameLabel = [[UILabel alloc] initWithFrame:CGRectMake(i*(ScreenWidth/3), kHvertical(114), ScreenWidth/3, kHvertical(20))];
+        nicknameLabel.textColor = deepColor;
+        nicknameLabel.font = [UIFont systemFontOfSize:kHorizontal(14)];
+        nicknameLabel.tag = 10000+i;
+        nicknameLabel.backgroundColor = localColor;
+        [self addSubview:nicknameLabel];
+        
+        UILabel *changLabel = [[UILabel alloc] initWithFrame:CGRectMake(i*(ScreenWidth/3), kHvertical(134), ScreenWidth/3, kHvertical(20))];
+        changLabel.textColor = textTintColor;
+        changLabel.font = [UIFont systemFontOfSize:kHorizontal(14)];
+        changLabel.tag = 10001+i;
+        changLabel.backgroundColor = [UIColor cyanColor];
+        [self addSubview:changLabel];
+        
+        UIButton *likeBtn = [[UIButton alloc] initWithFrame:CGRectMake(i*(ScreenWidth/3), changLabel.bottom, ScreenWidth/3, kHvertical(45))];
+        likeBtn.tag = 10002+i;
+        likeBtn.backgroundColor = RedColor;
+        [self addSubview:likeBtn];
+    }
+    
+}
+@end

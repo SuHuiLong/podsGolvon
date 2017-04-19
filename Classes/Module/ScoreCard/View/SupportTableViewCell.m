@@ -1,0 +1,96 @@
+//
+//  SupportTableViewCell.m
+//  Golvon
+//
+//  Created by 李盼盼 on 16/8/11.
+//  Copyright © 2016年 苏辉龙. All rights reserved.
+//
+
+#import "SupportTableViewCell.h"
+#import "UIImageView+WebCache.h"
+
+
+@implementation SupportTableViewCell
+
+-(instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    if (self == [super initWithStyle:style reuseIdentifier:reuseIdentifier]) {
+        [self createCell];
+    }
+    return self;
+}
+
+-(void)createCell{
+    // 头像
+    _headerImage = [UIImageView new];
+    _headerImage.frame = CGRectMake(kWvertical(18),kWvertical(8), kWvertical(50), kWvertical(50));
+    _headerImage.contentMode = UIViewContentModeScaleAspectFill;
+    _headerImage.clipsToBounds = YES;
+    _headerImage.layer.cornerRadius = kWvertical(50)/2;
+    [self.contentView addSubview:_headerImage];
+    
+    _Vimage = [[UIImageView alloc] init];
+    _Vimage.image = [UIImage imageNamed:@"个人中心加v"];
+    _Vimage.hidden = YES;
+    [self.contentView addSubview:_Vimage];
+    
+    
+    //昵称
+    _nickname = [UILabel new];
+    
+    [self.contentView addSubview:_nickname];
+    
+    //时间
+    _timeLabel = [UILabel new];
+    [self.contentView addSubview:_timeLabel];
+    
+    //关注
+    _followBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    _followBtn.frame = CGRectMake(ScreenWidth - kWvertical(27)-kWvertical(44), 0, kWvertical(27)+kWvertical(44), HScale(11.1));
+    [self.contentView addSubview:_followBtn];
+    [_followBtn addTarget:self action:@selector(buttonClick) forControlEvents:(UIControlEventTouchUpInside)];
+    
+    _followImage = [UIImageView new];
+    _followImage.frame = CGRectMake((_followBtn.width - kWvertical(27))/2,kHvertical(16) , kWvertical(27), kHvertical(36));
+    [_followBtn addSubview:_followImage];
+}
+-(void)relayoutWithModel:(SupportModel *)model{
+    self.model = model;
+    
+    [_headerImage sd_setImageWithURL:[NSURL URLWithString:model.picture] placeholderImage:[UIImage imageNamed:@"headerDefault_S"]];
+    
+    _Vimage.frame = CGRectMake(_headerImage.right - kWvertical(12), kHvertical(45), kWvertical(14), kWvertical(14));
+    if ([model.interview_state isEqualToString:@"0"]) {
+        _Vimage.hidden = YES;
+//        _Vimage.hidden = NO;
+
+    }else{
+        _Vimage.hidden = NO;
+    }
+
+    
+    _nickname.text = model.nickname;
+    _nickname.textColor = GPColor(38, 38, 38);
+    _nickname.font = [UIFont systemFontOfSize:kHorizontal(14)];
+    _nickname.frame = CGRectMake(_headerImage.right + kWvertical(9), kHvertical(14), 200, kHvertical(20));
+    [_nickname sizeToFit];
+    
+    if ([model.followstate isEqualToString:@"1"]) {
+        
+        _followImage.image = [UIImage imageNamed:@"榜单已关注"];
+        
+    }else{
+        
+        _followImage.image = [UIImage imageNamed:@"addFollow(other)"];
+    }
+    
+    _timeLabel.text = model.time;
+    _timeLabel.textColor = GPColor(166, 166, 166);
+    _timeLabel.font = [UIFont systemFontOfSize:kHorizontal(14)];
+    _timeLabel.frame = CGRectMake(_headerImage.right + kWvertical(9), kHvertical(36), 200, kHvertical(20));
+}
+-(void)buttonClick{
+    if (self.setFollowBtnBlock) {
+        self.setFollowBtnBlock(self.model);
+    }
+}
+@end

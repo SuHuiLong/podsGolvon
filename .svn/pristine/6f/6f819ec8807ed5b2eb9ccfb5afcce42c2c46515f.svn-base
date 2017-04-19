@@ -1,0 +1,14 @@
+//
+//  ActivityFooterTableViewCell.h
+//  podsGolvon
+//
+//  Created by apple on 2016/12/26.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "CustomeLabel.h"
+@interface ActivityFooterTableViewCell : UITableViewCell
+@property (nonatomic, strong) UILabel   *contentLabel;
+
+@end

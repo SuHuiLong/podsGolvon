@@ -1,0 +1,820 @@
+//
+//  AppDelegate.m
+//  podsGolvon
+//
+//  Created by shiyingdong on 16/8/25.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "AppDelegate.h"
+#import "SelfNavigationViewController.h"
+#import "TabBarViewController.h"
+#import "RegistViewController.h"
+//#import "JWLaunchAd.h"
+#import "AdvertiseView.h"
+
+#import "BBLaunchAdMonitor.h"
+#import "AdvertiseView.h"
+
+#import <BaiduMapAPI_Map/BMKMapComponent.h>
+#import "WXApi.h"
+#import "JPUSHService.h"
+#import "UMMobClick/MobClick.h"
+#import "SimpleInterest.h"
+#import "BeginViewController.h"
+
+#import "Self_Fans_ViewController.h"
+#import "Self_LY_ViewController.h"
+#import "HF_ViewController.h"
+#import "DZ_ViewController.h"
+#import "XT_ViewController.h"
+#import "UserDetailViewController.h"
+#import "NewDetailViewController.h"
+#import "GroupStatisticsViewController.h"
+
+#import "AidViewController.h"
+
+#import "ConsummateViewController.h"
+#import "WeiboSDK.h"
+
+#ifdef NSFoundationVersionNumber_iOS_9_x_Max
+#import <UserNotifications/UserNotifications.h> // 这里是iOS10需要用到的框架
+#endif
+
+//百度地图
+BMKMapManager* _mapManager;
+
+@interface AppDelegate ()<BMKGeneralDelegate,WXApiDelegate,WeiboSDKDelegate,JPUSHRegisterDelegate>
+
+@property (nonatomic, strong)UIImageView *advertiseView;
+
+@end
+
+@implementation AppDelegate
+
+-(DownLoadDataSource *)downLoad{
+    if (!_downLoad) {
+        _downLoad = [[DownLoadDataSource alloc]init];
+    }
+    return _downLoad;
+}
+//提示界面
+-(void)alertShowView:(NSString *)str{
+    
+    SucessView *sView = [[SucessView alloc] initWithFrame:CGRectMake(WScale(37.1), HScale(44.7), WScale(26.1), HScale(10.8)) imageImageName: @"失败" descStr:str];
+    [self.window addSubview:sView];
+    dispatch_time_t delayTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0/*延迟执行时间*/ * NSEC_PER_SEC));
+    
+    dispatch_after(delayTime, dispatch_get_main_queue(), ^{
+        [sView removeFromSuperview];
+    });
+    
+}
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    //百度地图
+    _mapManager = [[BMKMapManager alloc]init];
+    [_mapManager start:@"NMzzbsseml9D8WVGx68vDMukQLA3uXAj" generalDelegate:self];
+    //微信
+    [WXApi registerApp:@"wx0280066284c24330"];
+    //微博
+    [WeiboSDK registerApp:@"2262811943"];
+    
+    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+
+    self.window.backgroundColor = [UIColor whiteColor];
+    self.window.rootViewController = [[TabBarViewController alloc]init];
+    [self.window makeKeyAndVisible];
+    
+    //获取版本号
+    NSString *versionKey = @"CFBundleVersion";
+    //上一次使用的版本
+    NSString *lastVersion = [userDefaults objectForKey:versionKey];
+    //当前使用的版本
+    NSString *currentVersion = [NSBundle mainBundle].infoDictionary[versionKey];
+    
+    BOOL Bigger = [self isVersion:currentVersion biggerThanVersion:lastVersion];
+    
+//    [userDefaults synchronize];
+    NSString *userNameId = userDefaultId;
+    
+
+    if (Bigger&&!userDefaultUid) {
+        self.window.rootViewController = [[BeginViewController alloc] init];
+    }else{
+        [userDefaults setObject:currentVersion forKey:versionKey];
+        if ([userNameId isEqualToString:@"0"]) {
+            self.window.rootViewController = [[RegistViewController alloc] init];
+
+        }else{   
+            if (userNameId) {
+               NSString *ReciveNotice = [userDefaults objectForKey:@"ReciveNotice"];
+                if (ReciveNotice) {
+                    [self requestWithBadgeValue];
+                }
+//                SelfNavigationViewController *navigationViewController = [[SelfNavigationViewController alloc] initWithRootViewController:[[TabBarViewController alloc]init]];
+//                self.window.rootViewController = navigationViewController;
+
+                self.window.rootViewController = [[TabBarViewController alloc]init];
+                //广告页
+                [self getAdvertisingImage];
+            }else{
+                self.window.rootViewController = [[BeginViewController alloc] init];
+            }
+        }
+    }
+    
+    [_window makeKeyAndVisible];
+#pragma mark- 接收自定义推送消息
+    NSNotificationCenter *defaultCenter = [NSNotificationCenter defaultCenter];
+    [defaultCenter addObserver:self selector:@selector(networkDidReceiveMessage:) name:kJPFNetworkDidReceiveMessageNotification object:nil];
+
+    if ([[UIDevice currentDevice].systemVersion floatValue] >= 10.0) {
+#ifdef NSFoundationVersionNumber_iOS_9_x_Max
+        JPUSHRegisterEntity * entity = [[JPUSHRegisterEntity alloc] init];
+        entity.types = UNAuthorizationOptionAlert|UNAuthorizationOptionBadge|UNAuthorizationOptionSound;
+        [JPUSHService registerForRemoteNotificationConfig:entity delegate:self];
+#endif
+    } else if ([[UIDevice currentDevice].systemVersion floatValue] >= 8.0) {
+        //可以添加自定义categories
+        [JPUSHService registerForRemoteNotificationTypes:(UIUserNotificationTypeBadge |UIUserNotificationTypeSound |UIUserNotificationTypeAlert) categories:nil];
+    }
+    //如不需要使用IDFA，advertisingIdentifier 可为nil
+    [JPUSHService setupWithOption:launchOptions appKey:@"b760f9b0410de382dc94eae6"
+                          channel:@"Publish channel"
+                 apsForProduction:FALSE
+            advertisingIdentifier:nil];
+    
+    //2.1.9版本新增获取registration id block接口。
+    [JPUSHService registrationIDCompletionHandler:^(int resCode, NSString *registrationID) {
+        if(resCode == 0){
+            NSLog(@"registrationID获取成功：%@",registrationID);
+        }
+        else{
+            NSLog(@"registrationID获取失败，code：%d",resCode);
+        }
+    }];
+#pragma mark - 友盟统计
+    UMConfigInstance.appKey = @"573bdddc67e58e70580028a5";
+    [MobClick startWithConfigure:UMConfigInstance];
+    
+    [self.window makeKeyAndVisible];
+    
+    return YES;
+}
+
+/**
+ *  初始化广告页面
+ */
+- (void)getAdvertisingImage
+{
+    // 1.判断沙盒中是否存在广告图片，如果存在，直接显示
+    NSString *filePath = [self getFilePathWithImageName:[userDefaults valueForKey:adImageName]];
+    
+    BOOL isExist = [self isFileExistWithFilePath:filePath];
+    
+    if (isExist) {// 图片存在
+        AdvertiseView *advertiseView = [[AdvertiseView alloc] initWithFrame:self.window.bounds];
+        advertiseView.filePath = filePath;
+        if (filePath.length>0) {
+            [advertiseView show];
+        }
+    }
+    
+    // 2.无论沙盒中是否存在广告图片，都需要重新调用广告接口，判断广告是否更新
+    [self getAdvertisingImageWithUrl];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(pushAdView) name:@"pushtoad" object:nil];
+}
+
+
+
+/**
+ *  判断文件是否存在
+ */
+- (BOOL)isFileExistWithFilePath:(NSString *)filePath
+{
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    BOOL isDirectory = FALSE;
+    return [fileManager fileExistsAtPath:filePath isDirectory:&isDirectory];
+}
+
+/**
+ *  初始化广告页面
+ */
+- (void)getAdvertisingImageWithUrl
+{
+    
+    // TODO 请求广告接口
+    
+    DownLoadDataSource *manager = [[DownLoadDataSource alloc] init];
+    [manager downloadWithUrl:[NSString stringWithFormat:@"%@commonapi.php?func=ad",apiHeader120] parameters:nil complicate:^(BOOL success, id data) {
+        if (success) {
+            if ([data isKindOfClass:[NSDictionary class]]) {
+                NSLog(@"%@",data);
+                [userDefaults setValue:data forKey:@"adData"];
+            }
+        }else{
+            [self testATS];
+        }
+    }];
+
+    NSDictionary *imageDict = [userDefaults objectForKey:@"adData"];
+    NSString *imageUrl = [imageDict objectForKey:@"pic"];
+    NSInteger ts = [[imageDict objectForKey:@"ts"] integerValue];
+    
+    // 获取图片名:43-130P5122Z60-50.jpg
+    NSArray *stringArr = [imageUrl componentsSeparatedByString:@"/"];
+    NSString *imageName = stringArr.lastObject;
+    
+    // 拼接沙盒路径
+    NSString *filePath = [self getFilePathWithImageName:imageName];
+    BOOL isExist = [self isFileExistWithFilePath:filePath];
+    NSString *imageNameStr = [userDefaults valueForKey:adImageName];
+    if (ts == 0) {
+        [self deleteOldImage];
+        [kUserDefaults removeObjectForKey:adImageName];
+        [kUserDefaults synchronize];
+        // 如果有广告链接，将广告链接也保存下来
+    } else if (!isExist||!imageNameStr){// 如果该图片不存在，则删除老图片，下载新图片
+        [self downloadAdImageWithUrl:imageUrl imageName:imageName];
+    }
+}
+- (void)testATS {
+    //先导入证书，找到证书的路径
+    NSString *cerPath = [[NSBundle mainBundle] pathForResource:@"api.golvon.com" ofType:@"cer"];
+    NSData *certData = [NSData dataWithContentsOfFile:cerPath];
+    
+    //AFSSLPinningModeNone 这个模式表示不做 SSL pinning，只跟浏览器一样在系统的信任机构列表里验证服务端返回的证书。若证书是信任机构签发的就会通过，若是自己服务器生成的证书，这里是不会通过的。
+    //AFSSLPinningModeCertificate 这个模式表示用证书绑定方式验证证书，需要客户端保存有服务端的证书拷贝，这里验证分两步，第一步验证证书的域名/有效期等信息，第二步是对比服务端返回的证书跟客户端返回的是否一致。
+    //AFSSLPinningModePublicKey 这个模式同样是用证书绑定方式验证，客户端要有服务端的证书拷贝，只是验证时只验证证书里的公钥，不验证证书的有效期等信息。只要公钥是正确的，就能保证通信不会被窃听，因为中间人没有私钥，无法解开通过公钥加密的数据。
+    
+    AFSecurityPolicy *securityPolicy = [AFSecurityPolicy policyWithPinningMode:AFSSLPinningModeNone];
+    if (certData) {
+        securityPolicy.pinnedCertificates = @[certData];
+    }
+    AFHTTPSessionManager *sessionManager = [AFHTTPSessionManager manager];
+    [sessionManager setSecurityPolicy:securityPolicy];
+    sessionManager.responseSerializer = [AFJSONResponseSerializer serializer];
+    sessionManager.responseSerializer.acceptableContentTypes = [sessionManager.responseSerializer.acceptableContentTypes setByAddingObject:@"text/html"];
+    
+    NSString *urlStr = @"https://api.golvon.com/commonapi.php?func=ad";
+    [sessionManager GET:urlStr parameters:nil progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSLog(@"responseObject = %@", responseObject);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        NSLog(@"error = %@", error);
+    }];
+    
+//    [sessionManager GET:urlStr parameters:nil success:^(NSURLSessionDataTask *task, id responseObject) {
+//        NSLog(@"responseObject = %@", responseObject);
+//    } failure:^(NSURLSessionDataTask *task, NSError *error) {
+//        NSLog(@"error = %@", error);
+//    }];
+}
+/**
+ *  下载新图片
+ */
+- (void)downloadAdImageWithUrl:(NSString *)imageUrl imageName:(NSString *)imageName
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        
+        NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:imageUrl]];
+        UIImage *image = [UIImage imageWithData:data];
+        
+        NSString *filePath = [self getFilePathWithImageName:imageName]; // 保存文件的名称
+        
+        if ([UIImagePNGRepresentation(image) writeToFile:filePath atomically:YES]) {// 保存成功
+            NSLog(@"保存成功");
+            [self deleteOldImage];
+            [kUserDefaults setValue:imageName forKey:adImageName];
+            [kUserDefaults synchronize];
+            // 如果有广告链接，将广告链接也保存下来
+        }else{
+            NSLog(@"保存失败");
+        }
+        
+    });
+}
+
+/**
+ *  删除旧图片
+ */
+- (void)deleteOldImage
+{
+    NSString *imageName = [kUserDefaults valueForKey:adImageName];
+    if (imageName) {
+        NSString *filePath = [self getFilePathWithImageName:imageName];
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        [fileManager removeItemAtPath:filePath error:nil];
+    }
+}
+
+/**
+ *  根据图片名拼接文件路径
+ */
+- (NSString *)getFilePathWithImageName:(NSString *)imageName
+{
+    if (imageName) {
+        
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory,NSUserDomainMask, YES);
+        NSString *filePath = [[paths objectAtIndex:0] stringByAppendingPathComponent:imageName];
+        
+        return filePath;
+    }
+    
+    return nil;
+}
+
+-(void)pushAdView{
+    NSDictionary *adData = [userDefaults objectForKey:@"adData"];
+    NSString *adUel = [adData objectForKey:@"url"];
+    
+    UITabBarController *tabVC = (UITabBarController *)self.window.rootViewController;
+    UINavigationController *pushClassStance = (UINavigationController *)tabVC.viewControllers[tabVC.selectedIndex];
+
+    UserDetailViewController *vc = [[UserDetailViewController alloc] init];
+    vc.hidesBottomBarWhenPushed = YES;
+    vc.urlStr = adUel;
+    vc.isShare = @"1";
+    [pushClassStance pushViewController:vc animated:YES];
+    
+}
+
+//判断版本号
+- (BOOL)isVersion:(NSString*)versionA biggerThanVersion:(NSString*)versionB
+{
+    NSArray *arrayNow = [versionB componentsSeparatedByString:@"."];
+    NSArray *arrayNew = [versionA componentsSeparatedByString:@"."];
+    BOOL isBigger = NO;
+    NSInteger i = arrayNew.count > arrayNow.count? arrayNow.count : arrayNew.count;
+    NSInteger j = 0;
+    BOOL hasResult = NO;
+    for (j = 0; j < i; j ++) {
+        NSString* strNew = [arrayNew objectAtIndex:j];
+        NSString* strNow = [arrayNow objectAtIndex:j];
+        if ([strNew integerValue] > [strNow integerValue]) {
+            hasResult = YES;
+            isBigger = YES;
+            break;
+        }
+        if ([strNew integerValue] < [strNow integerValue]) {
+            hasResult = YES;
+            isBigger = NO;
+            break;
+        }
+    }
+    if (!hasResult) {
+        if (arrayNew.count > arrayNow.count) {
+            NSInteger nTmp = 0;
+            NSInteger k = 0;
+            for (k = arrayNow.count; k < arrayNew.count; k++) {
+                nTmp += [[arrayNew objectAtIndex:k]integerValue];
+            }
+            if (nTmp > 0) {
+                isBigger = YES;
+            }
+        }
+    }
+    return isBigger;
+}
+
+
+#pragma mark - 重写AppDelegate的handleOpenURL和openURL方法
+- (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url
+{
+    return [WXApi handleOpenURL:url delegate:self];
+}
+
+- (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication annotation:(id)annotation
+{
+    
+    return [WXApi handleOpenURL:url delegate:self];
+}
+
+
+//微信分享回调
+-(void) onResp:(BaseResp*)resp
+{
+    if([resp isKindOfClass:[SendMessageToWXResp class]])
+    {
+        
+        if (resp.errCode == 0) {
+            
+            [[[UIAlertView alloc] initWithTitle:@"提示" message:@"分享成功" delegate:self cancelButtonTitle:@"确认" otherButtonTitles:nil, nil] show];
+            
+            
+        }else{
+            [[[UIAlertView alloc] initWithTitle:@"提示" message:@"分享失败" delegate:self cancelButtonTitle:@"确认" otherButtonTitles:nil, nil] show];
+            
+        }
+    }
+}
+
+
+#pragma mark -- WeiboSDKDelegate
+
+- (BOOL)application:(UIApplication *)application openURL:(nonnull NSURL *)url options:(nonnull NSDictionary<NSString *,id> *)options {
+    // 这里建议判断下
+    return [WeiboSDK handleOpenURL:url delegate:self];
+}
+
+- (void)didReceiveWeiboResponse:(WBBaseResponse *)response {
+    if ([response isKindOfClass:WBSendMessageToWeiboResponse.class])
+    {
+        if (response.statusCode == 0) {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"成功" message:@"微博分享成功" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+            [alert show];
+        }
+        else {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"失败" message:@"微博分享失败" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+            [alert show];
+        }
+    }
+    else if ([response isKindOfClass:WBAuthorizeResponse.class]){
+        if (response.statusCode == 0) {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"成功" message:@"新浪微博授权成功" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+            [alert show];
+        }
+        else {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"失败" message:@"新浪微博授权失败" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
+            [alert show];
+        }
+    }
+    
+}
+
+- (void)didReceiveWeiboRequest:(WBBaseRequest *)request {
+    
+}
+
+- (void)applicationWillResignActive:(UIApplication *)application {
+    // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
+    // Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
+}
+
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
+    // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
+}
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+    NSLog(@"进入前台");
+    NSString *ReciveNotice = [userDefaults objectForKey:@"ReciveNotice"];
+    if (ReciveNotice) {
+            [self requestWithBadgeValue];
+    }
+}
+
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+    // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+}
+
+- (void)applicationWillTerminate:(UIApplication *)application {
+    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+    // Saves changes in the application's managed object context before the application terminates.
+}
+
+- (void)application:(UIApplication *)application
+didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    /// Required - 注册 DeviceToken
+    [JPUSHService registerDeviceToken:deviceToken];
+}
+- (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
+    //Optional
+    NSLog(@"did Fail To Register For Remote Notifications With Error: %@", error);
+}
+
+#pragma mark - 极光推送
+
+// iOS 10 Support
+//软件运行中
+- (void)jpushNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification:(UNNotification *)notification withCompletionHandler:(void (^)(NSInteger))completionHandler {
+    // Required
+    NSDictionary * userInfo = notification.request.content.userInfo;
+    [self requestWithBadgeValue];
+    if([notification.request.trigger isKindOfClass:[UNPushNotificationTrigger class]]) {
+        [JPUSHService handleRemoteNotification:userInfo];
+    }
+    completionHandler(UNNotificationPresentationOptionAlert); // 需要执行这个方法，选择是否提醒用户，有Badge、Sound、Alert三种类型可以选择设置
+}
+
+// iOS 10 Support
+//软件后台
+- (void)jpushNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)())completionHandler {
+    // Required
+    NSDictionary * userInfo = response.notification.request.content.userInfo;
+    if([response.notification.request.trigger isKindOfClass:[UNPushNotificationTrigger class]]) {
+        NSString *ReciveNotice = [userDefaults objectForKey:@"ReciveNotice"];
+        if (ReciveNotice) {
+            [self requestWithBadgeValue];
+            [JPUSHService handleRemoteNotification:userInfo];
+            NSString *JPushCode = [userInfo objectForKey:@"JPushCode"];
+            if ([JPushCode isEqualToString:@"6"]) {
+                [userDefaults setValue:@"1" forKey:@"showCharityView"];
+            }
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                [self push:userInfo];
+                [[UIApplication sharedApplication] setApplicationIconBadgeNumber:0];
+                [JPUSHService setBadge:0];
+                completionHandler(UIBackgroundFetchResultNewData);
+            });
+        }
+        
+        [JPUSHService handleRemoteNotification:userInfo];
+    }
+    completionHandler();  // 系统要求执行这个方法
+}
+
+//iOS10之前版本
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
+    
+    NSString *ReciveNotice = [userDefaults objectForKey:@"ReciveNotice"];
+    if (ReciveNotice) {
+        [self requestWithBadgeValue];
+        [JPUSHService handleRemoteNotification:userInfo];
+        NSString *JPushCode = [userInfo objectForKey:@"JPushCode"];
+        if ([JPushCode isEqualToString:@"6"]) {
+            [userDefaults setValue:@"1" forKey:@"showCharityView"];
+        }
+        if (application.applicationState != UIApplicationStateActive) { // 一般在应用运行状态下不做处理，或做特殊处理
+            [self push:userInfo];
+            [[UIApplication sharedApplication] setApplicationIconBadgeNumber:0];
+            [JPUSHService setBadge:0];
+            completionHandler(UIBackgroundFetchResultNewData);
+        }else{
+        }
+    }
+
+}
+- (void)push:(NSDictionary *)params
+{
+    // 获取导航控制器
+    UITabBarController *tabVC = (UITabBarController *)self.window.rootViewController;
+    UINavigationController *pushClassStance = (UINavigationController *)tabVC.viewControllers[tabVC.selectedIndex];
+    // 跳转到对应的控制器
+    NSString *Plogin_style = @"0";
+    if (pushClassStance == tabVC.viewControllers[2]) {
+        Plogin_style = @"1";
+    }
+    
+    NSString *JPushcode = [params objectForKey:@"JPushCode"];
+    
+    switch ([JPushcode intValue]) {
+        case 0:{
+            if (![JPushcode isEqualToString:@"0"]) {
+                break;
+            }
+            
+
+            Self_Fans_ViewController *vc = [[Self_Fans_ViewController alloc] init];
+            vc.hidesBottomBarWhenPushed = YES;
+            vc.name_id = userDefaultUid;
+            [self requUnreadFans];
+            [pushClassStance pushViewController:vc animated:YES];
+        }break;
+        case 1:{
+            if (![JPushcode isEqualToString:@"1"]) {
+                break;
+            }
+            HF_ViewController *vc = [[HF_ViewController alloc] init];
+            vc.hidesBottomBarWhenPushed = YES;
+            [self requUnreadComment];
+            vc.push_style = Plogin_style;
+            [pushClassStance pushViewController:vc animated:YES];
+            
+        }break;
+        case 2:{
+            if (![JPushcode isEqualToString:@"2"]) {
+                break;
+            }
+            NSString *name_id = [params objectForKey:@"ClickNameID"];
+            NSString *ScoreState = [params objectForKey:@"ScoreState"];
+            if (!ScoreState) {
+                [self requUnreadZan];
+                DZ_ViewController *vc = [[DZ_ViewController alloc] init];
+                vc.hidesBottomBarWhenPushed = YES;
+                [self requUnreadMessage];
+                [pushClassStance pushViewController:vc animated:YES];
+                
+            }else if ([ScoreState isEqualToString:@"1"]) {
+                [self requRankingUnread];
+                pushClassStance = (UINavigationController *)tabVC.viewControllers[3];
+                SimpleInterest *manger = [SimpleInterest sharedSingle];
+                if (name_id) {
+                    manger.supportNameID = [[NSMutableString alloc]initWithString:name_id];
+                }
+                manger.isFromA = YES;
+                pushClassStance.tabBarController.selectedIndex = 3;
+            } else {
+                [self requRankingUnread];
+                if ([name_id isEqualToString:@"usergolvon"]) {
+                    AidViewController *aid = [[AidViewController alloc]init];
+                    [aid setBlock:^(BOOL isView) {
+                    }];
+                    aid.hidesBottomBarWhenPushed = YES;
+                    [pushClassStance pushViewController:aid animated:YES];
+                }else{
+                    NewDetailViewController *detail = [[NewDetailViewController alloc]init];
+                    [detail setBlock:^(BOOL isView) {
+                    }];
+                    detail.nameID  =  name_id;
+                    detail.hidesBottomBarWhenPushed = YES;
+                    [pushClassStance pushViewController:detail animated:YES];
+                }
+            }
+            
+        }break;
+        case 3:{
+            if (![JPushcode isEqualToString:@"3"]) {
+                break;
+            }
+
+            Self_LY_ViewController *vc = [[Self_LY_ViewController alloc] init];
+            vc.hidesBottomBarWhenPushed = YES;
+            vc.nameID = userDefaultUid;
+            [self requUnreadMessage];
+            [pushClassStance pushViewController:vc animated:YES];
+        }break;
+        case 4:{
+            if (![JPushcode isEqualToString:@"4"]) {
+                break;
+            }
+            XT_ViewController *vc = [[XT_ViewController alloc] init];
+            vc.hidesBottomBarWhenPushed = YES;
+            [self requUnreadSystem];
+            vc.push_style = Plogin_style;
+            [pushClassStance pushViewController:vc animated:YES];
+            
+            
+        }break;
+        case 5:{
+            if (![JPushcode isEqualToString:@"5"]) {
+                break;
+            }
+            UserDetailViewController *vc = [[UserDetailViewController alloc] init];
+            vc.hidesBottomBarWhenPushed = YES;
+            [self requUnreadSystem];
+            vc.urlStr = [params objectForKey:@"ad_url"];
+            vc.titleStr = [params objectForKey:@"ad_name"];
+            [pushClassStance pushViewController:vc animated:YES];
+        }break;
+        case 6:{
+            NSString *gid = [params objectForKey:@"gid"];
+
+            GroupStatisticsViewController *group = [[GroupStatisticsViewController alloc] init];
+            group.loginNameId = userDefaultId;
+            group.nameUid = userDefaultUid;
+            group.groupId = gid;
+            group.isLoadDta = YES;
+            group.status = 1;
+            group.hidesBottomBarWhenPushed = YES;
+            [pushClassStance pushViewController:group animated:YES];
+            
+        }break;
+            
+            
+        default:
+            break;
+    }
+    
+}
+#pragma mark ---- 更新未读留言状态数据
+-(void)requUnreadMessage{
+    [self.downLoad downloadWithUrl:[NSString stringWithFormat:@"%@msgapi.php?func=setreadmsgs",apiHeader120] parameters:@{@"name_id":userDefaultId} complicate:^(BOOL success, id data) {
+        if (success) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"reloadUnreadData" object:nil];
+        }
+    }];
+}
+
+#pragma mark ---- 更新未读评论状态数据
+-(void)requUnreadComment{
+    
+    [self.downLoad downloadWithUrl:[NSString stringWithFormat:@"%@msgapi.php?func=setreadcommets",apiHeader120] parameters:@{@"name_id":userDefaultId} complicate:^(BOOL success, id data) {
+        if (success) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"reloadUnreadData" object:nil];
+        }
+    }];
+}
+#pragma mark ---- 更新关注状态数据
+-(void)requUnreadFans{
+    [self.downLoad downloadWithUrl:[NSString stringWithFormat:@"%@msgapi.php?func=setreadfocus",apiHeader120] parameters:@{@"name_id":userDefaultId} complicate:^(BOOL success, id data) {
+        if (success) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"reloadUnreadData" object:nil];
+        }
+    }];
+}
+
+#pragma mark ---- 更新未读专访点赞状态数据
+-(void)requUnreadZan{
+    [self.downLoad downloadWithUrl:[NSString stringWithFormat:@"%@msgapi.php?func=setreadclicks",apiHeader120] parameters:@{@"name_id":userDefaultId} complicate:^(BOOL success, id data) {
+        if (success) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"reloadUnreadData" object:nil];
+        }
+    }];
+}
+
+#pragma mark ---- 更新未读系统态数据
+-(void)requUnreadSystem{
+    [self.downLoad downloadWithUrl:[NSString stringWithFormat:@"%@msgapi.php?func=setreadsysmsgs",apiHeader120] parameters:@{@"name_id":userDefaultId} complicate:^(BOOL success, id data) {
+        if (success) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"reloadUnreadData" object:nil];
+        }
+    }];
+}
+
+#pragma mark ---- 更新未读榜单点赞系统态数据
+-(void)requRankingUnread{
+    [self.downLoad downloadWithUrl:[NSString stringWithFormat:@"%@Golvon/updateUserRankingUnread",urlHeader120] parameters:@{@"name_id":userDefaultId} complicate:^(BOOL success, id data) {
+        if (success) {
+            [self requestWithBadgeValue];
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"reloadUnreadData" object:nil];
+        }
+    }];
+}
+
+
+
+
+#pragma mark - 收到自定义消息
+
+-(void)networkDidReceiveMessage:(NSNotification *)noti{
+    
+    NSLog(@"%@",noti);
+
+}
+
+
+
+//更新未读消息
+-(void)requestWithBadgeValue{
+    
+    DownLoadDataSource *loadData = [[DownLoadDataSource alloc] init];
+    [loadData downloadWithUrl:[NSString stringWithFormat:@"%@msgapi.php?func=unreadinfo",apiHeader120] parameters:@{@"name_id":userDefaultId} complicate:^(BOOL success, id data) {
+        if (success) {
+            // 获取导航控制器
+//            SelfNavigationViewController *sVc = (SelfNavigationViewController *)self.window.rootViewController;
+//            UITabBarController *tabVC = (UITabBarController *)sVc.topViewController;
+            UITabBarController *tabVC = (UITabBarController *)self.window.rootViewController;
+
+            if ([tabVC isKindOfClass:[RegistViewController class]]) {
+                return ;
+            }
+            NSArray * tabArray = tabVC.viewControllers;
+
+            UINavigationController *pushClassStance =  (UINavigationController *)tabArray[4];
+            NSString *redNum = [NSString stringWithFormat:@"%@",data[@"all"]];
+            NSString *focus = [NSString stringWithFormat:@"%@",data[@"focus"]];
+            NSString *msgs = [NSString stringWithFormat:@"%@",data[@"msgs"]];
+            NSInteger bageValue = [focus integerValue] + [msgs integerValue];
+            NSString *bage = [NSString stringWithFormat:@"%ld",(long)bageValue];
+            if (![redNum isEqualToString:@"0"]) {
+                
+                if (![bage isEqualToString:@"0"]) {
+                    pushClassStance.tabBarItem.badgeValue = [NSString stringWithFormat:@"%@",bage];
+                }else{
+                    pushClassStance.tabBarItem.badgeValue = nil;
+                }
+                
+                [[UIApplication sharedApplication] setApplicationIconBadgeNumber:[redNum integerValue]];
+                [JPUSHService setBadge:[redNum integerValue]];
+
+            }
+            
+        }
+    }];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"ReloadSelfData" object:nil];
+
+}
+
+
+
+- (BOOL)shouldAutorotate{
+    return YES;
+}
+
+
+- (BOOL) shouldAutorotateToInterfaceOrientation:
+(UIInterfaceOrientation)toInterfaceOrientation {
+    return (toInterfaceOrientation == UIInterfaceOrientationPortrait);
+}
+
+- (UIInterfaceOrientation)preferredInterfaceOrientationForPresentation{
+    return UIInterfaceOrientationPortrait;
+}
+
+
+-(UIInterfaceOrientationMask)supportedInterfaceOrientations
+{
+    return UIInterfaceOrientationMaskPortrait;
+}
+
+
+
+
+
+
+
+
+
+@end

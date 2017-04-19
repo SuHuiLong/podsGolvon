@@ -1,0 +1,118 @@
+
+//
+//  PublishCollectionViewCell.m
+//  podsGolvon
+//
+//  Created by suhuilong on 16/8/29.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "PublishCollectionViewCell.h"
+#import <AssetsLibrary/AssetsLibrary.h>
+#import "ImageTool.h"
+@implementation PublishCollectionViewCell
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    @synchronized (self) {
+        if (self) {
+            self.backgroundColor = ClearColor;
+            [self createView];
+        }
+    }
+    return self;
+}
+
+-(void)createView{
+    //图片
+    _imageView = [[UIImageView alloc] initWithFrame:self.contentView.frame];
+    _imageView.layer.masksToBounds = YES;
+    _imageView.layer.cornerRadius = 1.0f;
+    [self.contentView addSubview:_imageView];
+    //选中按钮
+    _selectBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    _selectBtn.frame = CGRectMake(self.contentView.width *3/5, 0, self.contentView.width*2/5, self.contentView.width*2/5);
+    [_selectBtn setImage:[UIImage imageNamed:@"PublishAlbumsNormal"] forState:UIControlStateNormal];
+    [_selectBtn setImage:[UIImage imageNamed:@"PublishAlbumsSelect"] forState:UIControlStateSelected];
+    [_selectBtn setContentEdgeInsets:UIEdgeInsetsMake( kHvertical(6), _selectBtn.width - kWvertical(26), _selectBtn.width - kHvertical(6) - kWvertical(20), kWvertical(6))];
+    _selectBtn.selected = NO;
+    _selectBtn.hidden = YES;
+    [self.contentView addSubview:_selectBtn];
+    
+    
+    //删除按钮
+    _deleatBtn = [Factory createButtonWithFrame:CGRectMake(self.contentView.frame.size.width*3/5, -6, self.contentView.frame.size.width*2/5, self.contentView.frame.size.width*2/5) NormalImage:@"" SelectedImage:@"" target:self selector:nil];
+    [_deleatBtn setImage:[UIImage imageNamed:@"PublishPhotoDeleat"] forState:UIControlStateNormal];
+    [_deleatBtn setContentEdgeInsets:UIEdgeInsetsMake(0, _deleatBtn.width-kWvertical(15), _deleatBtn.height -kWvertical(18) , _deleatBtn.width - kWvertical(36))];
+    _deleatBtn.hidden = YES;
+    [self.contentView addSubview:_deleatBtn];
+    
+}
+
+
+-(void)configName:(id)model{
+    _deleatBtn.hidden = YES;
+
+    if ([model isKindOfClass:[NSData class]]) {
+        _deleatBtn.hidden = NO;
+        UIImage *dataImage = [UIImage imageWithData:model];
+        CGFloat imageWidth = dataImage.size.width;
+        CGFloat imageHeight = dataImage.size.height;
+        if (imageWidth>imageHeight) {
+            dataImage = [[ImageTool shareTool] reFromCenterSizeImage:dataImage toSize:CGSizeMake(imageHeight,imageHeight)];
+        }else{
+            dataImage = [[ImageTool shareTool] reFromCenterSizeImage:dataImage toSize:CGSizeMake(imageWidth,imageWidth)];
+        }
+    
+        
+        [_imageView setImage:dataImage];
+    } else if ([model isKindOfClass:[NSString class]]) {
+        [_imageView setImage:[UIImage imageNamed:model]];
+    }else{
+        _deleatBtn.hidden = NO;        
+        
+        UIImage *srcimg = model;
+        CGFloat imageWidth = srcimg.size.width;
+        CGFloat imageHeight = srcimg.size.height;
+        if (imageWidth>imageHeight) {
+            imageWidth = imageHeight;
+        }else{
+            imageHeight = imageWidth;
+        }
+        //test.png宽172 高192
+        NSLog(@"image width = %f,height = %f",srcimg.size.width,srcimg.size.height);
+        //要裁剪的图片区域，按照原图的像素大小来，超过原图大小的边自动适配
+        CGRect rect =  CGRectMake(srcimg.size.width/2 - imageWidth/2, srcimg.size.height/2 - imageHeight/2, imageWidth, imageHeight);
+        CGImageRef cgimg = CGImageCreateWithImageInRect([srcimg CGImage], rect);
+        _imageView.image = [UIImage imageWithCGImage:cgimg];
+        CGImageRelease(cgimg);
+        //用完一定要释放，否则内存泄露
+    }
+}
+
+-(void)configImage:(id)model{
+    
+    if ([model isKindOfClass:[NSString class]]) {
+        _selectBtn.hidden = YES;
+        [_imageView setImage:[UIImage imageNamed:model]];
+    }else{
+        _selectBtn.selected = NO;
+        _selectBtn.hidden = NO;
+        TotalPhotoModel *Model = model;
+        BOOL isSelect = Model.isSelect;
+        if (isSelect) {
+            _selectBtn.selected = YES;
+        }
+        UIImage *viewImage = [Model.url objectForKey:@"thumbnail"];
+        _imageView.image = viewImage;
+    }
+}
+
+
+-(void)setSelectIndex{
+        _selectBtn.selected = YES;
+}
+
+
+@end

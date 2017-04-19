@@ -1,0 +1,88 @@
+//
+//  InterviewTableViewCell.m
+//  podsGolvon
+//
+//  Created by apple on 2016/12/12.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "InterviewTableViewCell.h"
+#import "UIImageView+WebImage.h"
+
+@interface InterviewTableViewCell ()
+
+@property (nonatomic, strong) UIImageView   *interPic;
+@property (nonatomic, strong) UIImageView   *visitorImage;
+@property (nonatomic, strong) UILabel   *visitorLabel;
+@property (nonatomic, strong) UILabel   *titleLabel;
+@property (nonatomic, strong) UILabel   *timeLabel;
+@property (nonatomic, strong) UILabel   *likeLabel;
+
+@end
+
+@implementation InterviewTableViewCell
+
+-(instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        [self createCell];
+    }
+    return self;
+}
+-(void)createCell{
+    //专访图片
+    _interPic = [[UIImageView alloc] init];
+    _interPic.frame = CGRectMake(0, 0, ScreenWidth, kHvertical(198));
+    _interPic.contentMode = UIViewContentModeScaleAspectFill;
+    _interPic.layer.masksToBounds = YES;
+    _interPic.layer.cornerRadius = 4;
+//    _interPic.backgroundColor = [UIColor colorWithRed:arc4random()%255/256.0f green:arc4random()%255/256.0f  blue:arc4random()%255/256.0f  alpha:1.0f];
+    [self.contentView addSubview:_interPic];
+    
+    //点赞记录
+    _visitorImage = [[UIImageView alloc] init];
+    _visitorImage.frame = CGRectMake(ScreenWidth - kWvertical(83), 0, kWvertical(83), kHvertical(21));
+    _visitorImage.image = [UIImage imageNamed:@"findVisitorIcon"];
+    [self.contentView addSubview:_visitorImage];
+    
+    _visitorLabel = [[UILabel alloc] init];
+    _visitorLabel.font = [UIFont systemFontOfSize:kHorizontal(11)];
+    _visitorLabel.textColor = WhiteColor;
+    _visitorLabel.frame = CGRectMake(kWvertical(31), 0, kWvertical(47), kHvertical(21));
+    [_visitorImage addSubview:_visitorLabel];
+    
+    //title
+    _titleLabel = [[UILabel alloc] init];
+    _titleLabel.frame = CGRectMake(kWvertical(12), _interPic.bottom + kHvertical(9), ScreenWidth - kWvertical(24), kHvertical(20));
+    _titleLabel.font = [UIFont systemFontOfSize:kHorizontal(14)];
+    _titleLabel.textColor = deepColor;
+    [self.contentView addSubview:_titleLabel];
+    
+    //time
+    _timeLabel = [[UILabel alloc] init];
+    _timeLabel.frame = CGRectMake(kWvertical(12), _titleLabel.bottom + kHvertical(4), kWvertical(120), kHvertical(16));
+    _timeLabel.textColor = textTintColor;
+    _timeLabel.font = [UIFont systemFontOfSize:kHorizontal(11)];
+//    _timeLabel.text = @"两天前";
+    [self.contentView addSubview:_timeLabel];
+    
+    //like
+    _likeLabel = [[UILabel alloc] init];
+    _likeLabel.frame = CGRectMake(ScreenWidth - kWvertical(120)-kWvertical(12), _interPic.bottom+kHvertical(33), kWvertical(120), kHvertical(16));
+    _likeLabel.textAlignment = NSTextAlignmentRight;
+    _likeLabel.textColor = textTintColor;
+    _likeLabel.font = [UIFont systemFontOfSize:kHorizontal(11)];
+    [self.contentView addSubview:_likeLabel];
+}
+-(void)relayoutInterviewDataWithModel:(ChildInterviewModel *)model{
+    [_interPic setFindImageStr:model.pic];
+    
+    _visitorLabel.text = [NSString stringWithFormat:@"%@看过",model.readnum];
+    
+    _titleLabel.text = model.describe;
+    
+    _timeLabel.text = model.time;
+    
+    _likeLabel.text = [NSString stringWithFormat:@"点赞 %@",model.v_clicknum];
+}
+@end

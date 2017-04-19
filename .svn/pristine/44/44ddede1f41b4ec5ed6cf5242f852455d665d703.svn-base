@@ -1,0 +1,243 @@
+//
+//  RecommendViewController.m
+//  FindModule
+//
+//  Created by apple on 2016/12/1.
+//  Copyright © 2016年 apple. All rights reserved.
+//
+
+#import "RecommendViewController.h"
+#import "RecomentTableViewCell.h"
+#import "RecomentOtherCell.h"
+#import "RecomentInterviewCell.h"
+#import "LBBanner.h"
+#import "BannerModel.h"
+#import "UserDetailViewController.h"
+
+#import "RecomInformModel.h"
+#import "RecomInteModel.h"
+#import "ChildRecomModel.h"
+
+
+@interface RecommendViewController ()<UITableViewDelegate,UITableViewDataSource,LBBannerDelegate>
+@property (nonatomic, strong) UITableView   *tableview;
+@property (nonatomic, strong) LBBanner  *banner;
+
+@property (nonatomic, strong) DownLoadDataSource   *loadData;
+@property (nonatomic, strong) NSMutableArray   *bannerArr;
+@property (nonatomic, strong) NSMutableArray   *bannerIDArr;
+@property (nonatomic, strong) NSMutableArray   *recomentDataArr;
+@property (nonatomic, strong) NSMutableArray   *inteDataArr;
+@property (nonatomic, strong) NSMutableArray   *informationDataArr;
+
+@end
+static NSString *cellID = @"RecomentTableViewCell";
+static NSString *interViewID = @"RecomentInterviewCell";
+static NSString *saiID = @"saiID";
+static NSString *huoID = @"huoID";
+static NSString *lvID = @"lvID";
+
+@implementation RecommendViewController
+-(DownLoadDataSource *)loadData{
+    if (!_loadData) {
+        _loadData = [[DownLoadDataSource alloc] init];
+    }
+    return _loadData;
+}
+-(NSMutableArray *)recomentDataArr{
+    if (!_recomentDataArr) {
+        _recomentDataArr = [NSMutableArray array];
+    }
+    return _recomentDataArr;
+}
+-(NSMutableArray *)inteDataArr{
+    if (!_inteDataArr) {
+        _inteDataArr = [NSMutableArray array];
+    }
+    return _inteDataArr;
+}
+-(NSMutableArray *)informationDataArr{
+    if (!_informationDataArr) {
+        _informationDataArr = [NSMutableArray array];
+    }
+    return _informationDataArr;
+}
+-(NSMutableArray *)bannerIDArr{
+    if (!_bannerIDArr) {
+        _bannerIDArr = [NSMutableArray array];
+    }
+    return _bannerIDArr;
+}
+-(NSMutableArray *)bannerArr{
+    if (!_bannerArr) {
+        _bannerArr = [NSMutableArray array];
+    }
+    return _bannerArr;
+}
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    [self requestBannerData];
+//    [self requestRecomentData];
+
+}
+#pragma mark ---- LoadData
+-(void)requestBannerData{
+    [self.loadData downloadWithUrl:[NSString stringWithFormat:@"%@Golvon/select_advertisement",urlHeader120] parameters:nil complicate:^(BOOL success, id data) {
+        if (success) {
+            NSArray *tempArr = data[@"data"];
+            for (NSDictionary *tempDic in tempArr) {
+                BannerModel *model = [BannerModel modelWithDictionary:tempDic];
+                
+                [self.bannerArr addObject:model.picture_url];
+                [self.bannerIDArr addObject:model.advertisement_url];
+            }
+            [self requestRecomentData];
+        }
+    }];
+}
+
+-(void)requestRecomentData{
+    
+    
+    NSDictionary *parameters = @{@"lastid":@(0),
+                                 @"type":_type};
+
+    [self.loadData downloadWithUrl:[NSString stringWithFormat:@"%@cao/findapi.php?findkey=gettypeall",urlHeader120] parameters:parameters complicate:^(BOOL success, id data) {
+        if (success) {
+            NSDictionary *tempArr = data;
+            NSDictionary *inforDic = tempArr[@"information"];
+            RecomInformModel *informationModel = [RecomInformModel modelAddDictionary:inforDic];
+            [self.informationDataArr addObject:informationModel];
+            
+            for (NSDictionary *tempDic in tempArr[@"inte"]) {
+                
+                RecomInteModel *inteModel = [RecomInteModel modelAddDictionary:tempDic];
+                [self.inteDataArr addObject:inteModel];
+            }
+            
+            for (NSDictionary *tempDic in tempArr[@"recommend"]) {
+                ChildRecomModel *recommentModel = [ChildRecomModel modelAddDictionary:tempDic];
+                [self.recomentDataArr addObject:recommentModel];
+            }
+            [self createTableview];
+
+            [_tableview reloadData];
+        }
+    }];
+}
+-(void)createBanner{
+//    NSMutableArray *picArr = [NSMutableArray array];
+//    for (NSInteger i = 0; i<[self.bannerArr count]; i++) {
+//        
+//    }
+    _banner = [[LBBanner alloc] initWithImageURLArray:self.bannerArr andFrame:CGRectMake(0, 0, ScreenWidth ,kHvertical(169))];
+    _banner.delegate = self;
+    _banner.pageTurnTime = 3.0;
+    
+    UIView *normal = [[UIView alloc] init];
+    normal.frame = CGRectMake(0, 0, 6, 6);
+    normal.backgroundColor = [UIColor colorWithWhite:1 alpha:0.7];
+    
+    UIView *blackView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 6, 6)];
+    blackView.backgroundColor = localColor;
+
+    [_banner customPageControlWithNormalPageView:normal andCurrentPageView:blackView andPageViewPadding:3];
+    
+}
+-(void)createTableview{
+    
+    [self createBanner];
+    
+    self.tableview = [[UITableView alloc] initWithFrame:CGRectMake(0, 102, ScreenWidth, ScreenHeight - 102-49) style:UITableViewStylePlain];
+    _tableview.tableHeaderView = _banner;
+    [_tableview registerClass:[RecomentTableViewCell class] forCellReuseIdentifier:cellID];
+    [_tableview registerClass:[RecomentInterviewCell class] forCellReuseIdentifier:interViewID];
+    [_tableview registerClass:[RecomentOtherCell class] forCellReuseIdentifier:saiID];
+    [_tableview registerClass:[RecomentOtherCell class] forCellReuseIdentifier:huoID];
+    [_tableview registerClass:[RecomentOtherCell class] forCellReuseIdentifier:lvID];
+
+    [self.tableview setDelegate:self];
+    [self.tableview setDataSource:self];
+    [self.view addSubview:_tableview];
+    
+}
+
+#pragma mark ---- UITableViewDelegate && UITableViewDataSource
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 1;
+}
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 2+self.recomentDataArr.count;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return kHvertical(5);
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    switch (indexPath.section) {
+        case 0:
+            return kHvertical(60);
+            break;
+        case 1:
+            return kHvertical(238);
+            break;
+            
+        default:
+            return kHvertical(297);
+            break;
+    }
+}
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.section == 0) {
+        RecomentTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID forIndexPath:indexPath];
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        [cell relayoutDataWithModel:self.informationDataArr[indexPath.row]];
+        return cell;
+    }else if (indexPath.section == 1){
+        
+        RecomentInterviewCell *interCell = [tableView dequeueReusableCellWithIdentifier:interViewID forIndexPath:indexPath];
+        interCell.selectionStyle = UITableViewCellSelectionStyleNone;
+        [interCell relayoutDataWithModel:self.inteDataArr[indexPath.row]];
+        return interCell;
+        
+    }else if (indexPath.section == 2){
+        
+        RecomentOtherCell *otherCell = [tableView dequeueReusableCellWithIdentifier:saiID forIndexPath:indexPath];
+        otherCell.selectionStyle = UITableViewCellSelectionStyleNone;
+        [otherCell relyoutDataWithModel:self.recomentDataArr[0]];
+        return otherCell;
+
+    }else if (indexPath.section == 3){
+        
+        RecomentOtherCell *other = [tableView dequeueReusableCellWithIdentifier:huoID forIndexPath:indexPath];
+        other.selectionStyle = UITableViewCellSelectionStyleNone;
+        other.typeLabel.text = @"活动推荐";
+        [other relyoutDataWithModel:self.recomentDataArr[1]];
+        return other;
+
+    }else{
+        
+        RecomentOtherCell *otherCell = [tableView dequeueReusableCellWithIdentifier:lvID forIndexPath:indexPath];
+        otherCell.selectionStyle = UITableViewCellSelectionStyleNone;
+        otherCell.typeLabel.text = @"旅游推荐";
+        [otherCell relyoutDataWithModel:self.recomentDataArr[2]];
+        return otherCell;
+    }
+    
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+
+}
+
+#pragma mark ---- bannerDelegate
+- (void)banner:(LBBanner *)banner didClickViewWithIndex:(NSInteger)index {
+    NSString *url = self.bannerIDArr[index-1];
+    UserDetailViewController *VC = [[UserDetailViewController alloc] init];
+    VC.urlStr = url;
+    [self.navigationController pushViewController:VC animated:YES];
+}
+@end

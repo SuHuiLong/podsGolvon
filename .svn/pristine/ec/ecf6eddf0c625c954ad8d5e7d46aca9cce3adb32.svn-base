@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "b6e64cb7-95df-894a-b506-c776871c755d++4584",
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "b6e64cb7-95df-894a-b506-c776871c755d++7011",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+    "b6e64cb7-95df-894a-b506-c776871c755d++4584" : {
+    "b6e64cb7-95df-894a-b506-c776871c755d++7011" : {
+
+    }
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "b6e64cb7-95df-894a-b506-c776871c755d++4584" : 0
+    "b6e64cb7-95df-894a-b506-c776871c755d++7011" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "31AA13AC-9B0A-4D3E-B5D3-E93A29A7AE6B",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "b6e64cb7-95df-894a-b506-c776871c755d++4584" : "podsGolvon\/"
+    "b6e64cb7-95df-894a-b506-c776871c755d++7011" : "iosPodsGolvon\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "podsGolvon",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "podsGolvon\/podsGolvon.xcworkspace",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/192.168.1.170\/svn\/golvon",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "b6e64cb7-95df-894a-b506-c776871c755d++4584"
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "b6e64cb7-95df-894a-b506-c776871c755d++7011"
+    }
+  ]
+}

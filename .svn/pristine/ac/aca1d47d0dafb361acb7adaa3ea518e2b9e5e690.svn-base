@@ -1,0 +1,24 @@
+//
+//  RecomentOtherCell.h
+//  podsGolvon
+//
+//  Created by apple on 2016/12/8.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "ChildRecomModel.h"
+
+@interface RecomentOtherCell : UITableViewCell
+
+@property (nonatomic, strong) UILabel   *typeLabel;
+@property (nonatomic, strong) UIImageView   *pictureView;
+@property (nonatomic, strong) UILabel   *titleLabel;
+@property (nonatomic, strong) UILabel   *readLabel;
+@property (nonatomic, strong) UILabel   *timeLabel;
+@property (nonatomic, strong) UIImageView   *timegroundView;
+@property (nonatomic, strong) UIImageView   *timeIcon;
+@property (nonatomic, strong) UILabel   *addTime;
+
+-(void)relyoutDataWithModel:(ChildRecomModel *)model;
+@end

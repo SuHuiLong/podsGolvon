@@ -1,0 +1,98 @@
+//
+//  RankListViewController.m
+//  podsGolvon
+//
+//  Created by apple on 2017/1/13.
+//  Copyright © 2017年 suhuilong. All rights reserved.
+//
+
+#import "RankListViewController.h"
+#import "ChildRankListViewController.h"
+
+#import "SegmentButton.h"
+#import "SegmentControlBottomView.h"
+#import "SegmentControlControlStatic.h"
+
+@interface RankListViewController ()<SegmentControlControlStaticDelegate,UIScrollViewDelegate>
+
+@property (nonatomic, strong) NSArray   *titleArr;
+@property (nonatomic, strong) NSMutableArray   *typeArr;
+@property (nonatomic, strong) SegmentControlControlStatic *topSView;
+@property (nonatomic, strong) SegmentControlBottomView *bottomSView;
+
+@end
+
+@implementation RankListViewController
+-(NSArray *)titleArr{
+    if (!_titleArr) {
+        _titleArr = [NSArray array];
+    }
+    return _titleArr;
+}
+-(NSMutableArray *)typeArr{
+    if (!_typeArr) {
+        _typeArr = [NSMutableArray array];
+    }
+    return _typeArr;
+}
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBarHidden = YES;
+    self.tabBarController.tabBar.hidden = NO;
+
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self createUI];
+}
+
+-(void)createUI{
+    
+    for (NSInteger i = 0; i<3; i++) {
+        ChildRankListViewController *childVC = [[ChildRankListViewController alloc] init];
+        [self addChildViewController:childVC];
+        [self.typeArr addObject:childVC];
+    }
+    self.titleArr = @[@"周榜",@"月榜",@"年榜"];
+    
+    self.bottomSView = [[SegmentControlBottomView alloc] initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+    _bottomSView.childViewController = self.typeArr;
+    _bottomSView.backgroundColor = [UIColor clearColor];
+    _bottomSView.delegate = self;
+    [self.view addSubview:_bottomSView];
+    
+    self.topSView = [SegmentControlControlStatic segmentedControlWithFrame:CGRectMake(64, 0, ScreenWidth-128, 64) delegate:self childVcTitle:self.titleArr];
+    [self.view addSubview:_topSView];
+    
+    UIButton *followBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    followBtn.frame = CGRectMake(0, 0, 64, 64);
+    [followBtn setImage:[UIImage imageNamed:@"scprdLefticon"] forState:UIControlStateNormal];
+    [self.view addSubview:followBtn];
+    
+    UIButton *timeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    timeBtn.frame = CGRectMake(ScreenWidth-64, 0, 64, 64);
+    [timeBtn setImage:[UIImage imageNamed:@"scordRighticon"] forState:UIControlStateNormal];
+    [self.view addSubview:timeBtn];
+
+}
+- (void)SGSegmentedControlStatic:(SegmentControlControlStatic *)segmentedControlStatic didSelectTitleAtIndex:(NSInteger)index {
+    NSLog(@"index - - %ld", (long)index);
+    // 计算滚动的位置
+    CGFloat offsetX = index * self.view.frame.size.width;
+    self.bottomSView.contentOffset = CGPointMake(offsetX, 0);
+    [self.bottomSView showChildVCViewWithIndex:index outsideVC:self];
+    
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
+
+    // 计算滚动到哪一页
+    NSInteger index = scrollView.contentOffset.x / scrollView.frame.size.width;
+
+    // 1.添加子控制器view
+    [self.bottomSView showChildVCViewWithIndex:index outsideVC:self];
+
+    // 2.把对应的标题选中
+    [self.topSView changeThePositionOfTheSelectedBtnWithScrollView:scrollView];
+}
+@end

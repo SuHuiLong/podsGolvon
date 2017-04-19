@@ -1,0 +1,116 @@
+//
+//  ApplyViewController.m
+//  podsGolvon
+//
+//  Created by apple on 2016/12/19.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "ApplyViewController.h"
+#import "ApplyTableViewCell.h"
+
+@interface ApplyViewController ()<UITableViewDelegate,UITableViewDataSource,UITextFieldDelegate>
+@property (nonatomic, strong) UITableView   *tableview;
+@property (nonatomic, strong) UITextField   *textField;
+@end
+
+static NSString *applyCellID = @"ApplyTableViewCell";
+@implementation ApplyViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = WhiteColor;
+    [self createUI];
+}
+
+-(void)createUI{
+    UIView *groundView = [[UIView alloc] init];
+    groundView.frame = CGRectMake(0, 0, ScreenWidth, kHvertical(78));
+    groundView.backgroundColor = WhiteColor;
+    
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(kWvertical(14), kHvertical(14), kWvertical(60), kHvertical(18))];
+    titleLabel.textColor = textTintColor;
+    titleLabel.text = @"活动时间";
+    titleLabel.font = [UIFont systemFontOfSize:kHorizontal(13)];
+    [groundView addSubview:titleLabel];
+    
+    UILabel *contentLabel = [[UILabel alloc] initWithFrame:CGRectMake(kWvertical(14), titleLabel.bottom+kHvertical(12), kWvertical(200), kHvertical(20))];
+    contentLabel.textColor = textTintColor;
+    contentLabel.text = @"11月 11日 14:00 星期五";
+    contentLabel.font = [UIFont systemFontOfSize:kHorizontal(14)];
+    [groundView addSubview:contentLabel];
+
+    
+    _tableview = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight) style:UITableViewStyleGrouped];
+    [_tableview setDelegate:self];
+    [_tableview setDataSource:self];
+    [_tableview registerClass:[ApplyTableViewCell class] forCellReuseIdentifier:applyCellID];
+    _tableview.rowHeight = kHvertical(38);
+    _tableview.tableHeaderView = groundView;
+    [self.view addSubview:_tableview];
+}
+-(UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    UIView *header = [[UIView alloc] init];
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(kWvertical(14), kHvertical(16), ScreenWidth - kWvertical(28), kHvertical(32))];
+    label.numberOfLines = 2;
+    label.text = @"以下信息将提供给（活动）发起人\n打球去不会泄露你的个人信息";
+    label.font = [UIFont systemFontOfSize:kHorizontal(11)];
+    label.textColor = textTintColor;
+    [header addSubview:label];
+    
+    return header;
+}
+-(UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section{
+    UIView *footer = [[UIView alloc] init];
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(kWvertical(14), kHvertical(16), ScreenWidth - kWvertical(28), kHvertical(32))];
+    label.numberOfLines = 2;
+    label.text = @"填写报名表并不代表报名成功，请完成活动介绍中的全部步骤，我们将在1个工作日内与你取得联系";
+    label.font = [UIFont systemFontOfSize:kHorizontal(11)];
+    label.textColor = textTintColor;
+    [footer addSubview:label];
+    
+    return footer;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return kHvertical(63);
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return kHvertical(370);
+}
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 3;
+}
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    ApplyTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:applyCellID forIndexPath:indexPath];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    self.textField = cell.contentField;
+    self.textField.delegate = self;
+    switch (indexPath.row) {
+        case 0:
+            cell.typeLabel.text = @"报名姓名";
+            cell.contentField.placeholder = @"请输入姓名";
+            break;
+            
+        case 1:
+            cell.typeLabel.text = @"移动电话";
+            cell.contentField.placeholder = @"请输入联系电话";
+
+            break;
+            
+        case 2:
+            cell.typeLabel.text = @"参赛人数";
+            cell.contentField.placeholder = @"请输入参加的人数";
+
+            break;
+    
+        default:
+            break;
+    }
+    
+    return cell;
+    
+}
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event{
+    [self.textField resignFirstResponder];
+}
+@end

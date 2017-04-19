@@ -1,0 +1,23 @@
+//
+//  ChildRecomModel.m
+//  podsGolvon
+//
+//  Created by apple on 2016/12/27.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "ChildRecomModel.h"
+
+@implementation ChildRecomModel
+
++(ChildRecomModel *)modelAddDictionary:(NSDictionary *)dic{
+    ChildRecomModel *model = [[ChildRecomModel alloc] init];
+    model.addts = dic[@"addts"];
+    model.ID = dic[@"ID"];
+    model.pic = dic[@"pic"];
+    model.title = dic[@"title"];
+    model.readnum = dic[@"readnum"];
+
+    return model;
+}
+@end

@@ -1,0 +1,42 @@
+//
+//  ActivityTableViewCell.m
+//  podsGolvon
+//
+//  Created by apple on 2016/12/26.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "ActivityTableViewCell.h"
+
+@interface ActivityTableViewCell ()
+
+@property (nonatomic, strong) UILabel   *describeLabel;
+@property (nonatomic, strong) UILabel   *contentLabel;
+
+@end
+@implementation ActivityTableViewCell
+
+-(instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        [self createCell];
+    }
+    return self;
+}
+
+-(void)createCell{
+    _describeLabel = [[UILabel alloc] initWithFrame:CGRectMake(kWvertical(21), 0, kWvertical(80), kHvertical(38))];
+    _describeLabel.textColor = deepColor;
+    _describeLabel.font = [UIFont systemFontOfSize:kHorizontal(14)];
+    _describeLabel.text = @"活动时间";
+    [self.contentView addSubview:_describeLabel];
+    
+    _contentLabel = [[UILabel alloc] initWithFrame:CGRectMake(ScreenWidth - kWvertical(150)-kWvertical(21), 0,kWvertical(150) ,kHvertical(38))];
+    _contentLabel.textColor = textTintColor;
+    _contentLabel.font = [UIFont systemFontOfSize:kHorizontal(13)];
+    _contentLabel.text = @"我是内容啦啦啦";
+    _contentLabel.textAlignment = NSTextAlignmentRight;
+    [self.contentView addSubview:_contentLabel];
+    
+}
+@end

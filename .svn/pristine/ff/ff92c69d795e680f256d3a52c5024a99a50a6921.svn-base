@@ -1,0 +1,38 @@
+//
+//  TourismFooterView.m
+//  podsGolvon
+//
+//  Created by apple on 2016/12/19.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "TourismFooterView.h"
+
+@interface TourismFooterView ()
+@property (nonatomic, strong) UILabel   *contentLabel;
+@end
+
+@implementation TourismFooterView
+-(instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        [self createFooter];
+    }
+    return self;
+}
+-(void)createFooter{
+    UILabel *titleLabel = [[UILabel alloc] init];
+    titleLabel.text = @"简介";
+    titleLabel.frame = CGRectMake(kWvertical(14), kHvertical(6), kWvertical(40), kHvertical(21));
+    titleLabel.font = [UIFont systemFontOfSize:kHorizontal(15)];
+    [self.contentView addSubview:titleLabel];
+    
+    _contentLabel = [[UILabel alloc] init];
+    _contentLabel.frame = CGRectMake(kWvertical(14), kHvertical(44), ScreenWidth - kWvertical(28), kHvertical(120));
+    _contentLabel.font = [UIFont systemFontOfSize:kHorizontal(15)];
+    _contentLabel.numberOfLines = 0;
+    _contentLabel.text = @"抑扬顿挫，快人快语，阳光把工作状态带到了我们的谈话中。根据以往做访谈的体会，笔者深深感觉到高尔夫族群是个综合体，它包容了各种性格与气质，既然有沉静似水，当然有海阔天空。作为靠脸、靠嘴吃饭的主持人，跟高尔夫还是蛮搭的，所以万事不能先有定见。";
+    [self.contentView addSubview:_contentLabel];
+}
+
+@end

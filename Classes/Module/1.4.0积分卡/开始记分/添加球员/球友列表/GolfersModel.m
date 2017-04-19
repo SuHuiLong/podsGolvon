@@ -1,0 +1,22 @@
+//
+//  GolfersModel.m
+//  podsGolvon
+//
+//  Created by SHL on 2016/11/1.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "GolfersModel.h"
+
+@implementation GolfersModel
+
+-(void)configData:(NSDictionary *)dict{
+    if (dict) {
+        _nickname = dict[@"nickname"];
+        _uid = dict[@"uid"];
+        _avator = dict[@"avator"];
+        _isSelect = NO;
+    }
+}
+
+@end

@@ -1,0 +1,19 @@
+//
+//  ZhuanFangModel.h
+//  Golvon
+//
+//  Created by 李盼盼 on 16/4/4.
+//  Copyright © 2016年 李盼盼. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface ZhuanFangModel : NSObject
+@property (strong, nonatomic) NSString   *title;  //标题
+@property (strong, nonatomic) NSString   *time;   //专访时间
+@property (strong, nonatomic) NSString   *state;  //专访状态
+@property (strong, nonatomic) NSString   *image;  //专访图片
+@property (copy, nonatomic) NSString *name;
+@property (copy, nonatomic) NSString *url;
++(ZhuanFangModel *)paresFromDictionary:(NSDictionary *)dic;
+@end

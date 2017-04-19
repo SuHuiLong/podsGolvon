@@ -1,0 +1,77 @@
+//
+//  RecomentOtherCell.m
+//  podsGolvon
+//
+//  Created by apple on 2016/12/8.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "RecomentOtherCell.h"
+
+@implementation RecomentOtherCell
+
+-(instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        
+        [self createOtherCell];
+    }
+    return self;
+}
+
+-(void)createOtherCell{
+    
+    _typeLabel = [[UILabel alloc] init];
+    _typeLabel.frame = CGRectMake(kWvertical(12), 0, kWvertical(70), kHvertical(40));
+    _typeLabel.text = @"赛事推荐";
+    _typeLabel.font = [UIFont boldSystemFontOfSize:kHorizontal(14)];
+    [self.contentView addSubview:_typeLabel];
+    
+    
+    UIImageView *clickIcon = [[UIImageView alloc] init];
+    clickIcon.frame = CGRectMake(ScreenWidth - kWvertical(20), kHvertical(17), kWvertical(4), kHvertical(7));
+    clickIcon.image = [UIImage imageNamed:@"RightSelected"];
+    [self.contentView addSubview:clickIcon];
+    
+    UILabel *moreLabel = [[UILabel alloc] init];
+    moreLabel.frame = CGRectMake(clickIcon.left - kWvertical(32), kHvertical(12), kWvertical(30), kHvertical(16));
+    moreLabel.text = @"更多";
+    moreLabel.textColor = localColor;
+    moreLabel.textAlignment = NSTextAlignmentRight;
+    moreLabel.font = [UIFont systemFontOfSize:kHorizontal(11)];
+    [self.contentView addSubview:moreLabel];
+    
+    _pictureView = [[UIImageView alloc] init];
+    _pictureView.frame = CGRectMake(0, _typeLabel.bottom, ScreenWidth, kHvertical(198));
+    [_pictureView sd_setImageWithURL:[NSURL URLWithString:@"http://i4.piimg.com/567571/5bb2bd5f3d9ed1c9.jpg"]];
+    [self.contentView addSubview:_pictureView];
+    
+    _titleLabel = [[UILabel alloc] init];
+    _titleLabel.frame = CGRectMake(kWvertical(12), _pictureView.bottom+kHvertical(9), ScreenWidth - kWvertical(24), kHvertical(20));
+    _titleLabel.font = [UIFont systemFontOfSize:kHorizontal(14)];
+    _titleLabel.text = @"啦啦啦啦我是标题啦";
+    [self.contentView addSubview:_titleLabel];
+    
+    _timeIcon = [[UIImageView alloc] init];
+    _timeIcon.frame = CGRectMake(ScreenWidth - kWvertical(103), 0, kWvertical(103), kHvertical(21));
+    _timeIcon.image = [UIImage imageNamed:@"findTimeIcon"];
+    [_pictureView addSubview:_timeIcon];
+    
+    _timeLabel = [[UILabel alloc] initWithFrame:CGRectMake(kWvertical(28), 0, kWvertical(80), kHvertical(21))];
+    _timeLabel.text = @"12天 7时 55分";
+    _timeLabel.font = [UIFont systemFontOfSize:kHorizontal(10)];
+    _timeLabel.textColor = WhiteColor;
+    [_timeIcon addSubview:_timeLabel];
+    
+    _readLabel = [[UILabel alloc] init];
+    _readLabel.text = @"8997人看过";
+    _readLabel.textColor = textTintColor;
+    _readLabel.frame = CGRectMake(ScreenWidth - kWvertical(14) - kWvertical(120), _pictureView.bottom + kHvertical(33), kWvertical(120), kHvertical(15));
+    _readLabel.font = [UIFont systemFontOfSize:kHorizontal(11)];
+    _readLabel.textAlignment = NSTextAlignmentRight;
+    [self.contentView addSubview:_readLabel];
+    
+    
+    
+}
+@end

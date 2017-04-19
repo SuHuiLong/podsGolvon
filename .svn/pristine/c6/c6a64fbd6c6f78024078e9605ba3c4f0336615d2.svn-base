@@ -1,0 +1,26 @@
+//
+//  InterviewDetileViewController.h
+//  podsGolvon
+//
+//  Created by apple on 2016/12/28.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+typedef void (^VisionBlock) (BOOL isView);
+
+@interface InterviewDetileViewController : UIViewController
+@property (copy, nonatomic) NSString *htmlStr;
+@property (copy, nonatomic) NSString *addTimeStr;
+@property (copy, nonatomic) NSString *readStr;
+@property (copy, nonatomic) NSString *likeStr;
+@property (copy, nonatomic) NSString *titleStr;
+@property (copy, nonatomic) NSString *ID;
+@property (copy, nonatomic) NSString *type;
+@property (copy, nonatomic) NSString *maskPic;
+@property (assign, nonatomic) BOOL isLike;
+
+@property (strong, nonatomic) VisionBlock    block;
+-(void)setBlock:(VisionBlock)block;
+
+@end

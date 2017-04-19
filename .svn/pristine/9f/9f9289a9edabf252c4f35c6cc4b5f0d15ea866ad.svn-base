@@ -1,0 +1,84 @@
+//
+//  DownLoadDataSource.m
+//
+//  Created by 李盼盼 on 15/11/10.
+//  Copyright (c) 2015年 lipan. All rights reserved.
+//
+
+#import "DownLoadDataSource.h"
+#import "AFNetworking.h"
+@interface DownLoadDataSource()
+
+
+@end
+
+@implementation DownLoadDataSource
+
+-(AFHTTPSessionManager *)manager{
+    if (!_manager) {
+        _manager = [AFHTTPSessionManager manager];
+    }
+    return _manager;
+}
+
+-(instancetype)init
+{
+    if (self = [super init])
+    {
+        self.manager = [AFHTTPSessionManager manager];
+        //设置成json解析器
+        self.manager.responseSerializer = [AFJSONResponseSerializer serializer];
+        self.manager.requestSerializer = [AFHTTPRequestSerializer serializer];
+        //设置可以接受的contentTypes
+        self.manager.responseSerializer.acceptableContentTypes = [NSSet setWithObjects:@"application/json",
+                                                                  @"text/html",
+                                                                  @"image/jpeg",
+                                                                  @"image/png",
+                                                                  @"application/octet-stream",
+                                                                  @"text/json",
+                                                                  @"text/plain",
+                                                                  @"multipart/form-data",
+                                                                  @"text/json", nil];
+        [self.manager.securityPolicy setAllowInvalidCertificates:YES];
+        
+    }
+    return self;
+}
+
+-(void)downloadWithUrl:(MYString)urlStr parameters:(NSDictionary *)dic complicate:(Complicate) complicate
+{
+    [self.manager POST:urlStr parameters:dic progress:^(NSProgress * _Nonnull uploadProgress) {
+        
+    } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        NSError * error = nil;
+        if (error)
+        {
+            if (complicate)
+            {
+                complicate(NO,error);
+            }
+        }else
+        {
+            if (complicate)
+            {
+                complicate(YES,responseObject);
+            }
+        }
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        
+        
+        if (complicate)
+        {
+            complicate(NO,error);
+            NSLog(@"错区类型%@",error);
+        }
+        
+    }];
+    
+}
+
+
+
+@end

@@ -1,0 +1,87 @@
+//
+//  RecomentOtherCell.m
+//  podsGolvon
+//
+//  Created by apple on 2016/12/8.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "RecomentOtherCell.h"
+
+@implementation RecomentOtherCell
+
+-(instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        
+        [self createOtherCell];
+    }
+    return self;
+}
+
+-(void)createOtherCell{
+    
+    _typeLabel = [[UILabel alloc] init];
+    _typeLabel.frame = CGRectMake(kWvertical(12), 0, kWvertical(70), kHvertical(40));
+    _typeLabel.font = [UIFont boldSystemFontOfSize:kHorizontal(14)];
+    [self.contentView addSubview:_typeLabel];
+        
+    _pictureView = [[UIImageView alloc] init];
+    _pictureView.frame = CGRectMake(0, _typeLabel.bottom, ScreenWidth, kHvertical(198));
+    [self.contentView addSubview:_pictureView];
+    
+    _titleLabel = [[UILabel alloc] init];
+    _titleLabel.frame = CGRectMake(kWvertical(12), _pictureView.bottom+kHvertical(9), ScreenWidth - kWvertical(24), kHvertical(20));
+    _titleLabel.font = [UIFont systemFontOfSize:kHorizontal(14)];
+    [self.contentView addSubview:_titleLabel];
+    
+    _timegroundView = [[UIImageView alloc] init];
+    _timegroundView.image = [UIImage imageNamed:@"findGroundView"];
+    [self.contentView addSubview:_timegroundView];
+    
+    _addTime = [[UILabel alloc] init];
+    _addTime.font = [UIFont systemFontOfSize:kHorizontal(11)];
+    _addTime.textColor = textTintColor;
+    [_timegroundView addSubview:_addTime];
+    
+    
+    _timeIcon = [[UIImageView alloc] init];
+    _timeIcon.image = [UIImage imageNamed:@"findTimeIcon"];
+    [_timegroundView addSubview:_timeIcon];
+    
+    _timeLabel = [[UILabel alloc] init];
+    _timeLabel.font = [UIFont systemFontOfSize:kHorizontal(12)];
+    _timeLabel.textColor = WhiteColor;
+    [_timegroundView addSubview:_timeLabel];
+    
+    _tempLabel = [[UILabel alloc] init];
+    _tempLabel.font = [UIFont systemFontOfSize:kHorizontal(12)];
+    _tempLabel.frame = CGRectMake(0, 0, 100, 100);
+    
+    _readLabel = [[UILabel alloc] init];
+    _readLabel.textColor = textTintColor;
+    _readLabel.frame = CGRectMake(ScreenWidth - kWvertical(14) - kWvertical(120), _pictureView.bottom + kHvertical(33), kWvertical(120), kHvertical(15));
+    _readLabel.font = [UIFont systemFontOfSize:kHorizontal(11)];
+    _readLabel.textAlignment = NSTextAlignmentRight;
+    [self.contentView addSubview:_readLabel];
+    
+    
+}
+
+-(void)relyoutDataWithModel:(ChildRecomModel *)model{
+    [_pictureView setFindImageStr:model.pic];
+    
+    _typeLabel.text = [NSString stringWithFormat:@"%@推荐",model.content];
+    
+    _tempLabel.text = [NSString stringWithFormat:@"%@",model.addts];
+    [_tempLabel sizeToFit];
+    
+    _timegroundView.frame = CGRectMake(ScreenWidth - _tempLabel.width-kWvertical(24)-4, _typeLabel.bottom, _tempLabel.width+kWvertical(24)+4, kHvertical(18));
+    _timeIcon.frame = CGRectMake(8, kHvertical(4), kWvertical(11), kWvertical(11));
+    _timeLabel.text = _tempLabel.text;
+    _timeLabel.frame = CGRectMake(_timeIcon.right+4, 0, _tempLabel.width, kHvertical(18));
+    
+    _titleLabel.text = model.title;
+    _readLabel.text = [NSString stringWithFormat:@"%@看过",model.readnum];
+}
+@end

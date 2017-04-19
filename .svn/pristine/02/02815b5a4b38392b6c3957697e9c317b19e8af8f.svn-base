@@ -1,0 +1,121 @@
+//
+//  PrefixHeader.pch
+//  podsGolvon
+//
+//  Created by 李盼盼 on 16/8/26.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#ifndef PrefixHeader_pch
+#define PrefixHeader_pch
+
+
+#import "Header.h"
+//工具类
+
+
+//屏幕
+#define ScreenSize [UIScreen mainScreen].bounds.size
+#define ScreenWidth ScreenSize.width
+#define ScreenHeight ScreenSize.height
+// 宽的左侧比例计算:在()中填入比例:(例) %10 -填-> 10
+#define WScale(M) ScreenWidth*M/100
+// 宽的右侧比例计算:在()中填入比例:(例) %10 -填-> 10
+#define RWScale(M) ScreenWidth*(1-M/100)
+// 高的上侧比例计算:在()中填入比例:(例) %10 -填-> 10
+#define HScale(M) ScreenHeight*M/100
+// 高的下侧比例计算:在()中填入比例:(例) %10 -填-> 10
+#define RHScale(M) ScreenHeight(1-M/100)
+
+//缓存
+
+
+
+
+
+
+
+#define kWvertical(W)  ([UIScreen mainScreen].bounds.size.width/375.0)*(W)
+#define kHvertical(W)  ([UIScreen mainScreen].bounds.size.height/667.0)*(W)
+
+//字体
+#define kHorizontal(Z) ((Z)/375.0*([UIScreen mainScreen].bounds.size.width))
+
+//字体和图片
+#define Font(...)  [Global FontRegular:(__VA_ARGS__)]
+#define FontBold(...)  [Global FontSemibold:(__VA_ARGS__)]
+#define FontLigth(...) [Global FontLight:(__VA_ARGS__)]
+#define ImageName(...) [UIImage imageNamed:\\_VA_ARGS__)]
+
+
+//颜色
+#define GPRGBAColor(r, g, b ,a) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:(a)/1]
+#define GPColor(r, g, b) GPRGBAColor((r), (g), (b),255)
+
+#define rgba(r,g,b,a) GPRGBAColor((r), (g), (b),(a))
+
+//安全释放宏
+#define Release_Safe(_control) [_control release], _control = nil;
+#define RandomColor RGB(arc4random()%256,arc4random()%256,arc4random()%256)
+
+#pragma mark - SystemColor
+#define BlackColor [UIColor blackColor]
+#define ClearColor [UIColor clearColor]
+#define WhiteColor [UIColor whiteColor]
+#define RedColor [UIColor redColor]
+#define BlueColor [UIColor blueColor]
+#define OrangeColor [UIColor orangeColor]
+#define LightGrayColor [UIColor lightGrayColor]
+#define LightTextColor [UIColor lightTextColor]
+#define BORDCOLOR GPColor(299, 299, 299)
+
+
+
+#define WeakSelfType __weak __typeof(&*self)
+
+#define GPGrayColor(v) CTColor((v), (v), (v))
+
+#define GryColor GPC olor(94, 106, 112)
+
+/**
+ *  灰色字体
+ */
+
+#define GRYTEXTCOLOR GPColor(149, 151, 155)
+
+//判断机型
+#define Device [[[UIDevice currentDevice] systemVersion]floatValue]
+
+//平方light
+#define Light @"PingFangSC-Light"
+
+//#define urlHeader120 @"http://api.golvon.com/"
+//#define apiHeader120 @"http://api.golvon.com/"
+
+#define urlHeader120 @"http://dev.golvon.com/"
+#define apiHeader120 @"http://dev.golvon.com/"
+
+
+#define localColor GPColor(53, 141, 227)
+#define deepColor GPColor(58, 60, 72)
+#define textTintColor  GPColor(137, 138, 145)
+#define mostTintColor GPColor(184, 185, 189)
+
+#define SeparatorColor GPColor(237, 234, 234)
+#define TINTLINCOLOR GPColor(237, 237, 237)
+#define NAVLINECOLOR GPColor(214, 214, 214)
+
+
+
+#endif /* PrefixHeader_pch */
+
+
+#ifdef DEBUG
+
+//#define NSSLog(FORMAT, ...) fprintf(stderr,"%s:%d\t%s\n",[[[NSString stringWithUTF8String:__FILE__] lastPathComponent] UTF8String], __LINE__, [[NSString stringWithFormat:FORMAT, ##__VA_ARGS__] UTF8String]);
+
+#else
+
+#define NSSLog(...)
+
+#endif

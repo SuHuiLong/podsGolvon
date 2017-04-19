@@ -1,0 +1,327 @@
+//
+//  FindAceViewController.m
+//  Golvon
+//
+//  Created by 李盼盼 on 16/6/23.
+//  Copyright © 2016年 苏辉龙. All rights reserved.
+//
+
+#import "FindAceViewController.h"
+#import "FindAceModel.h"
+#import "NewZhuanFangViewController.h"
+#import "FindAceTableViewCell.h"
+#import "MarkItem.h"
+
+
+//static NSString *identifier = @"FindAceCollectionViewCell";
+static NSString *cellID = @"FindAceTableViewCell";
+@interface FindAceViewController ()<UITableViewDelegate,UITableViewDataSource>
+@property (strong, nonatomic) DownLoadDataSource            *loadData;
+@property (strong, nonatomic) NSMutableArray                *dataArr;
+@property (strong, nonatomic) UITableView                *tableView;
+@property (nonatomic, copy) NSArray<MarkItem *> *markItemsArray; ///< 标签工具集合
+@property (assign, nonatomic) NSInteger    viewStr;
+
+@property (strong, nonatomic) MBProgressHUD    *HUD;
+/***  等待View*/
+@property (strong, nonatomic) UIView    *placeView;
+@property (strong, nonatomic) UIView *noneDataView;
+
+@end
+
+
+@implementation FindAceViewController
+
+-(instancetype)init{
+    self = [super init];
+    if (self) {
+        _coreDataManager = [CoreDataManager sharedCoreDataManager];
+    }
+    return self;
+    
+}
+
+-(DownLoadDataSource *)loadData{
+    if (!_loadData) {
+        _loadData = [[DownLoadDataSource alloc]init];
+    }
+    return _loadData;
+}
+-(NSMutableArray *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [[NSMutableArray alloc]init];
+    }
+    return _dataArr;
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleDefault animated:NO];
+    self.navigationController.navigationBarHidden = NO;    
+    
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self createUI];
+    self.navigationItem.title = @"高球达人";
+    [self.navigationController.navigationBar setTitleTextAttributes:@{NSFontAttributeName:[UIFont boldSystemFontOfSize:kHorizontal(18)],NSForegroundColorAttributeName:deepColor}];
+
+
+    [self testNetState];
+}
+-(void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    [_placeView removeFromSuperview];
+}
+-(void)testNetState{
+    __weak typeof(self) weakself = self;
+    AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
+    [manager.reachabilityManager setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status) {
+
+        if (status == AFNetworkReachabilityStatusNotReachable) {
+            weakself.tableView.hidden = YES;
+            [weakself createNoInternet];
+//            [weakself initWithHistoryData];
+        }else{
+            [weakself requestData];
+        }
+    }];
+    
+    [manager.reachabilityManager startMonitoring];
+}
+
+-(void)createNoInternet{
+    
+    [_noneDataView removeFromSuperview];
+    _noneDataView = [[UIView alloc] init];
+    _noneDataView.frame = CGRectMake(0, 64, ScreenWidth, ScreenHeight - 64-49);
+    _noneDataView.backgroundColor = GPColor(252, 252, 252);
+    [self.view addSubview:_noneDataView];
+    
+    UIImageView *noInternetImage = [[UIImageView alloc] init];
+    noInternetImage.image = [UIImage imageNamed:@"noInternetImage"];
+    noInternetImage.frame = CGRectMake((ScreenWidth - kWvertical(149))/2, kHvertical(143), kWvertical(149), kHvertical(99));
+    [_noneDataView addSubview:noInternetImage];
+    
+    
+    UILabel *noInternetLabel = [[UILabel alloc] init];
+    noInternetLabel.frame = CGRectMake(0, noInternetImage.bottom+kHvertical(10), ScreenWidth, kHvertical(17));
+    noInternetLabel.text = @"网络出错啦，点击按钮重新加载";
+    noInternetLabel.textAlignment = NSTextAlignmentCenter;
+    noInternetLabel.font = [UIFont systemFontOfSize:kHorizontal(12)];
+    noInternetLabel.textColor = mostTintColor;
+    [_noneDataView addSubview:noInternetLabel];
+    
+    
+    UIButton *noInternetBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    noInternetBtn.frame = CGRectMake((ScreenWidth - kWvertical(131))/2, noInternetLabel.bottom + kHvertical(10), kWvertical(131), kHvertical(32));
+    noInternetBtn.layer.borderColor = TINTLINCOLOR.CGColor;
+    noInternetBtn.layer.masksToBounds = YES;
+    noInternetBtn.layer.cornerRadius = 2;
+    noInternetBtn.layer.borderWidth = 0.5;
+    noInternetBtn.backgroundColor = WhiteColor;
+    [noInternetBtn setTitle:@"重新加载" forState:UIControlStateNormal];
+    noInternetBtn.titleLabel.font = [UIFont systemFontOfSize:kHorizontal(13)];
+    [noInternetBtn setTitleColor:GPColor(58, 60, 72) forState:UIControlStateNormal];
+    [noInternetBtn addTarget:self action:@selector(headerRefresh) forControlEvents:UIControlEventTouchUpInside];
+    [_noneDataView addSubview:noInternetBtn];
+    
+}
+//提示界面
+-(void)alertShowView:(NSString *)str{
+    
+    SucessView *sView = [[SucessView alloc] initWithFrame:CGRectMake(WScale(37.1), HScale(44.7), WScale(26.1), HScale(10.8)) imageImageName: @"失败" descStr: str];
+    [self.view addSubview:sView];
+    dispatch_time_t delayTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0/*延迟执行时间*/ * NSEC_PER_SEC));
+    
+    dispatch_after(delayTime, dispatch_get_main_queue(), ^{
+        [sView removeFromSuperview];
+    });
+    
+}
+#pragma mark ---- UI
+-(void)createUI{
+    _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+    _tableView.delegate = self;
+    _tableView.dataSource = self;
+    _tableView.separatorStyle = NO;
+    _tableView.rowHeight = HScale(32.2);
+    [_tableView registerClass:[FindAceTableViewCell class] forCellReuseIdentifier:cellID];
+    [self.view addSubview:_tableView];
+    
+    //    头部刷新
+    MJRefreshNormalHeader *refreshHeader = [MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(headerRefresh)];
+    //    立即刷新
+    self.tableView.mj_header = refreshHeader;
+    
+}
+-(void)createProgress{
+    
+    _placeView = [[UIView alloc] init];
+    _placeView.backgroundColor = WhiteColor;
+    _placeView.frame = CGRectMake(0, 64, ScreenWidth, ScreenHeight-64-49);
+    [self.view addSubview:_placeView];
+    
+    _HUD = [MBProgressHUD showHUDAddedTo:_placeView animated:YES];
+    _HUD.alpha = 0.5;
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+}
+#pragma mark ---- 请求数据
+-(void)initWithHistoryData{
+    
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    // 设置要抓取哪种类型的实体
+    NSEntityDescription *entity = [NSEntityDescription entityForName:@"ViewHistoryData" inManagedObjectContext:self.coreDataManager.managedObjContext];
+    // 设置抓取实体
+    [request setEntity:entity];
+    NSError *error = nil;
+    // 执行抓取数据的请求，返回符合条件的数据
+    NSArray *eventArray = [[self.coreDataManager.managedObjContext
+                            executeFetchRequest:request error:&error] mutableCopy];
+    if (eventArray.count>0) {
+        
+    ViewHistoryData *test = [eventArray objectAtIndex:0];
+    NSArray *Arr = test.findListView;
+    for (NSDictionary *temp in Arr) {
+        FindAceModel *model = [FindAceModel pareFromWithDictionary:temp];
+        _viewStr = [model.red_number integerValue];
+        [self.dataArr addObject:model];
+    }
+    
+        [self.tableView reloadData];
+        
+    }
+
+}
+
+
+-(void)requestData{
+    
+    if (_dataArr.count > 0) {
+        
+        [_placeView removeFromSuperview];
+        [self setHUD:nil];
+        
+    }else{
+        
+        [self createProgress];
+    }
+    __weak typeof(self) weakself = self;
+    NSString *URLstr = [NSString stringWithFormat:@"%@Golvon/select_interview_all",urlHeader120];
+    [self.loadData downloadWithUrl:URLstr parameters:nil complicate:^(BOOL success, id data) {
+        
+        [_placeView removeFromSuperview];
+        _HUD = nil;
+        
+        if (success) {
+            NSArray *Arr = data[@"data"];
+            [weakself.dataArr removeAllObjects];
+            for (NSDictionary *temp in Arr) {
+                FindAceModel *model = [FindAceModel pareFromWithDictionary:temp];
+                weakself.viewStr = [model.red_number integerValue];
+                [weakself.dataArr addObject:model];
+            }
+            
+            [weakself.tableView reloadData];
+            
+            NSFetchRequest *request = [[NSFetchRequest alloc] init];
+            // 设置要抓取哪种类型的实体
+            NSEntityDescription *entity = [NSEntityDescription entityForName:@"ViewHistoryData" inManagedObjectContext:self.coreDataManager.managedObjContext];
+            // 设置抓取实体
+            [request setEntity:entity];
+            [request setEntity:[NSEntityDescription entityForName:@"ViewHistoryData" inManagedObjectContext:[CoreDataManager sharedCoreDataManager].managedObjContext]];
+            NSError *error = nil;
+            NSArray *result = [[CoreDataManager sharedCoreDataManager].managedObjContext executeFetchRequest:request error:&error];//这里获取到的是一个数组，你需要取出你要更新的那个obj
+            
+            for (int i = 0; i<result.count; i++) {
+                ViewHistoryData *test = [result objectAtIndex:i];
+                test.findListView = Arr;
+            }
+            //    托管对象准备好后，调用托管对象上下文的save方法将数据写入数据库
+            BOOL isSaveSuccess = [[CoreDataManager sharedCoreDataManager].managedObjContext save:&error];
+            if (!isSaveSuccess) {
+//                NSLog(@"Error: %@,%@",error,[error userInfo]);
+            }else
+            {
+//                NSLog(@"Save successFull");
+            }
+            
+        }else{
+//            NSLog(@"请求失败");
+        }
+    }];
+    
+}
+
+-(void)headerRefresh{
+    __weak typeof(self) weakself = self;
+    NSString *URLstr = [NSString stringWithFormat:@"%@Golvon/select_interview_all",urlHeader120];
+    [self.loadData downloadWithUrl:URLstr parameters:nil complicate:^(BOOL success, id data) {
+        [self.tableView.mj_header endRefreshing];
+        if (success) {
+            NSDictionary *dic = data;
+            _noneDataView.hidden = YES;
+            [weakself.dataArr removeAllObjects];
+            for (NSDictionary *temp in dic[@"data"]) {
+                FindAceModel *model = [FindAceModel pareFromWithDictionary:temp];
+                weakself.viewStr = [model.red_number integerValue];
+                [weakself.dataArr addObject:model];
+            }
+            weakself.tableView.hidden = NO;
+            [weakself.tableView reloadData];
+            
+        }else{
+            
+        }
+    }];
+}
+
+#pragma mark ---- tableView代理
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _dataArr.count;
+}
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    FindAceTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
+    
+    // 标签工具1
+    CGPoint centerEnd1 = CGPointMake(_timeLabel.width/2, HScale(1.8)+_timeLabel.height/2);
+    MarkItem *item1 = [MarkItem itemWithView:_timeLabel centerStart:_timeLabel.center centerEnd:centerEnd1];
+    _markItemsArray = @[item1];
+    // 标签工具1
+    if (indexPath.row > _dataArr.count) {
+        return cell;
+    }
+    [cell relayoutWithModel:_dataArr[indexPath.row]];
+    return cell;
+}
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    __weak typeof(self) weakself = self;
+    NewZhuanFangViewController *zhuanFang = [[NewZhuanFangViewController alloc]init];
+    FindAceModel *model = self.dataArr[indexPath.row];
+    zhuanFang.interviewId = model.interViewID;
+    zhuanFang.interviewerId = model.interViewerID;
+    zhuanFang.interviewerName = model.nickname;
+    zhuanFang.htmlStr = model.htmlStr;
+    zhuanFang.hidesBottomBarWhenPushed = YES;
+    [zhuanFang setBlock:^(BOOL isView) {
+        weakself.viewStr = [model.red_number integerValue];
+        weakself.viewStr ++;
+        model.red_number = [NSString stringWithFormat:@"%ld",(long)_viewStr];
+        [weakself.tableView reloadData];
+    }];
+    
+    [self.navigationController pushViewController:zhuanFang animated:YES];
+    
+    [self.loadData downloadWithUrl:[NSString stringWithFormat:@"%@Golvon/updata_interview_rednumber",urlHeader120] parameters:@{@"interview_id":model.interViewID} complicate:^(BOOL success, id data) {
+        if (success) {
+            
+            [weakself.tableView reloadData];
+        }
+    } ];
+    
+    
+}
+
+
+@end

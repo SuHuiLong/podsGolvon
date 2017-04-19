@@ -1,0 +1,183 @@
+//
+//  TourismViewController.m
+//  FindModule
+//
+//  Created by apple on 2016/12/1.
+//  Copyright © 2016年 apple. All rights reserved.
+//
+
+#import "TourismViewController.h"
+#import "InterviewTableViewCell.h"
+#import "ChildCompetionData.h"
+#import "CountDown.h"
+#import "InterviewDetileViewController.h"
+
+
+@interface TourismViewController ()<UITableViewDelegate,UITableViewDataSource>
+
+@property (nonatomic, strong) UITableView   *tableview;
+@property (nonatomic, strong) DownLoadDataSource   *loadData;
+@property (nonatomic, strong) NSMutableArray   *tourismDataArr;
+
+
+@property (nonatomic, strong) NSMutableArray   *endTimeArr;
+@property (nonatomic, strong) CountDown   *countDown;
+
+@end
+static NSString *tourismCellID = @"tourismTableViewCell";
+@implementation TourismViewController
+-(DownLoadDataSource *)loadData{
+    if (!_loadData) {
+        _loadData = [[DownLoadDataSource alloc] init];
+    }
+    return _loadData;
+}
+-(NSMutableArray *)tourismDataArr{
+    if (!_tourismDataArr) {
+        _tourismDataArr = [NSMutableArray array];
+    }
+    return _tourismDataArr;
+}
+-(NSMutableArray *)endTimeArr{
+    if (!_endTimeArr) {
+        _endTimeArr = [NSMutableArray array];
+    }
+    return _endTimeArr;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self createUI];
+    [self requestTourisemData];
+    
+    
+    self.countDown = [[CountDown alloc] init];
+    __weak typeof(self) weakself = self;
+    [self.countDown countDownWithPER_SECBlock:^{
+        [weakself updateTimeInVisibleCells];
+    }];
+
+    
+}
+
+-(void)createUI{
+    _tableview = [[UITableView alloc] initWithFrame:CGRectMake(0, 102, ScreenWidth, ScreenHeight - 102 -49)];
+    _tableview.rowHeight = kHvertical(257);
+    [_tableview setDelegate:self];
+    [_tableview setDataSource:self];
+    _tableview.separatorStyle = false;
+    [_tableview registerClass:[InterviewTableViewCell class] forCellReuseIdentifier:tourismCellID];
+    [self.view addSubview:_tableview];
+}
+-(void)requestTourisemData{
+    
+    NSDictionary *parameters = @{@"lastid":@(0),
+                                 @"type":_type};
+
+    [self.loadData downloadWithUrl:[NSString stringWithFormat:@"%@cao/findapi.php?findkey=gettypeall",urlHeader120] parameters:parameters complicate:^(BOOL success, id data) {
+        if (success) {
+            NSArray *tempArr = data[@"data"];
+            for (NSInteger i=0; i<[tempArr count]; i++) {
+                
+                ChildCompetionData *model = [ChildCompetionData modelWithDictionary:tempArr[i]];
+                [self.endTimeArr addObject:tempArr[i][@"endts"]];
+                [self.tourismDataArr addObject:model];
+
+            }
+            [_tableview reloadData];
+        }
+    }];
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.tourismDataArr.count;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    InterviewTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:tourismCellID forIndexPath:indexPath];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    cell.visitorLabel.adjustsFontSizeToFitWidth = YES;
+    cell.visitorLabel.text = [self getNowTimeWithString:self.endTimeArr[indexPath.row]];
+    cell.tag = indexPath.row;
+
+    [cell relayoutTourismDataWithModel:self.tourismDataArr[indexPath.row]];
+    return cell;
+}
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    InterviewDetileViewController *VC = [[InterviewDetileViewController alloc] init];
+    ChildCompetionData *model = self.tourismDataArr[indexPath.row];
+    VC.hidesBottomBarWhenPushed = YES;
+    VC.readStr = model.readnum;
+    VC.titleStr = model.title;
+    VC.addTimeStr = model.addts;
+    VC.maskPic = model.pic;
+    VC.likeStr = model.clikenum;
+    VC.ID = model.ID;
+    VC.type = self.type;
+    VC.htmlStr = model.url;
+    [VC setBlock:^(BOOL isView) {
+        
+    }];
+    [self.navigationController pushViewController:VC animated:YES];
+}
+
+#pragma mark ---- countDown
+-(void)updateTimeInVisibleCells{
+    NSArray *cells = self.tableview.visibleCells;
+    for (InterviewTableViewCell *cell in cells) {
+        cell.visitorLabel.text = [self getNowTimeWithString:self.endTimeArr[cell.tag]];
+    }
+}
+-(NSString *)getNowTimeWithString:(NSString *)aTimeString{
+    NSDateFormatter* formater = [[NSDateFormatter alloc] init];
+    [formater setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    // 截止时间date格式
+    NSDate  *expireDate = [formater dateFromString:aTimeString];
+    NSDate  *nowDate = [NSDate date];
+    // 当前时间字符串格式
+    NSString *nowDateStr = [formater stringFromDate:nowDate];
+    // 当前时间date格式
+    nowDate = [formater dateFromString:nowDateStr];
+    
+    NSTimeInterval timeInterval =[expireDate timeIntervalSinceDate:nowDate];
+    
+    int days = (int)(timeInterval/(3600*24));
+    int hours = (int)((timeInterval-days*24*3600)/3600);
+    int minutes = (int)(timeInterval-days*24*3600-hours*3600)/60;
+    int seconds = timeInterval-days*24*3600-hours*3600-minutes*60;
+    
+    NSString *dayStr;NSString *hoursStr;NSString *minutesStr;NSString *secondsStr;
+    //天
+    dayStr = [NSString stringWithFormat:@"%d",days];
+    //小时
+    hoursStr = [NSString stringWithFormat:@"%d",hours];
+    //分钟
+    if(minutes<10)
+        minutesStr = [NSString stringWithFormat:@"0%d",minutes];
+    else
+        minutesStr = [NSString stringWithFormat:@"%d",minutes];
+    //秒
+    if(seconds < 10)
+        secondsStr = [NSString stringWithFormat:@"0%d", seconds];
+    else
+        secondsStr = [NSString stringWithFormat:@"%d",seconds];
+    if (hours<=0&&minutes<=0&&seconds<=0) {
+        return @"活动已经结束！";
+    }
+    if (days) {
+        return [NSString stringWithFormat:@"%@天%@小时%@分%@秒", dayStr,hoursStr, minutesStr,secondsStr];
+    }
+    return [NSString stringWithFormat:@"%@小时%@分%@秒",hoursStr , minutesStr,secondsStr];
+    
+    
+}
+
+-(NSInteger)getDayNumberWithYear:(NSInteger )y month:(NSInteger )m{
+    int days[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (2 == m && 0 == (y % 4) && (0 != (y % 100) || 0 == (y % 400))) {
+        days[1] = 29;
+    }
+    return (days[m - 1]);
+}
+
+@end

@@ -1,0 +1,66 @@
+//
+//  Header.h
+//  Golvon
+//
+//  Created by 李盼盼 on 16/4/8.
+//  Copyright © 2016年 李盼盼. All rights reserved.
+//
+
+#ifndef Header_h
+#define Header_h
+
+#ifdef __OBJC__
+#import "BaseViewController.h"
+#import "UIView+Addition.h"
+#import "UIImageView+WebImage.h"
+
+#import "UIView+GPExtension.h"
+
+#import "UserTopNavigation.h"
+#import <YYKit/YYKit.h>
+#import "AppDelegate.h"
+#import "DownloadDataSource/DownLoadDataSource.h"
+#import "UIImageView+WebCache.m"
+#import "SucessView.h"
+#import "GolvonAlertView.h"
+#import "ZBarSDK.h"
+#import "Masonry.h"
+#import "MBProgressHUD.h"
+#import "DownLoadDataSource.h"
+#import "MJRefresh.h"
+#import "NewDetailViewController.h"
+#import "AidViewController.h"
+#import "AFNetworking.h"
+#import "UIButton+touch.h"
+#import "JPUSHService.h"
+
+
+#import "UITableView+FDTemplateLayoutCell.h"
+#import "UIImageView+RoundedCorner.h"
+#endif
+
+/**
+ *  NSUserDefaults
+ */
+#define userDefaults  [NSUserDefaults standardUserDefaults]
+
+/**
+ *  UserId
+ */
+
+#define userDefaultId [[NSUserDefaults standardUserDefaults] objectForKey:@"name_id"]//用户nameID
+
+#define userDefaultUid [[NSUserDefaults standardUserDefaults] objectForKey:@"uid"]//用户uid
+
+
+
+#define pageSize 16
+#define RGBA(r, g, b, a)                    [UIColor colorWithRed:r/255.0f green:g/255.0f blue:b/255.0f alpha:a]
+#define RGB(r, g, b)                        RGBA(r, g, b, 1.0f)
+
+#define pageColor RGB(67, 199, 176)
+
+
+
+
+#endif /* Header_h */

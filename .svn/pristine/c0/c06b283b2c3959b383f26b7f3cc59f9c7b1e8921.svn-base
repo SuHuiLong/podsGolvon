@@ -1,0 +1,15 @@
+//
+//  InterviewTableViewCell.h
+//  podsGolvon
+//
+//  Created by apple on 2016/12/12.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "ChildInterviewModel.h"
+@interface InterviewTableViewCell : UITableViewCell
+
+-(void)relayoutInterviewDataWithModel:(ChildInterviewModel *)model;
+
+@end

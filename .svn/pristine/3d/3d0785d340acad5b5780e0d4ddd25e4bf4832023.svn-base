@@ -1,0 +1,80 @@
+//
+//  ActivityViewController.m
+//  FindModule
+//
+//  Created by apple on 2016/12/1.
+//  Copyright © 2016年 apple. All rights reserved.
+//
+
+#import "ActivityViewController.h"
+#import "InterviewTableViewCell.h"
+#import "ActivityDetailViewController.h"
+#import "ChildActivityModel.h"
+
+@interface ActivityViewController ()<UITableViewDataSource,UITableViewDelegate>
+
+@property (nonatomic, strong) UITableView   *tableview;
+@property (nonatomic, strong) DownLoadDataSource   *loadData;
+@property (nonatomic, strong) NSMutableArray   *activityDataArr;
+
+@end
+
+static NSString *activityCellID = @"ActivityTableViewCell";
+@implementation ActivityViewController
+-(DownLoadDataSource *)loadData{
+    if (!_loadData) {
+        _loadData = [[DownLoadDataSource alloc] init];
+    }
+    return _loadData;
+}
+-(NSMutableArray *)activityDataArr{
+    if (!_activityDataArr) {
+        _activityDataArr = [NSMutableArray array];
+    }
+    return _activityDataArr;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self createUI];
+    [self requestActivityData];
+}
+-(void)createUI{
+    _tableview = [[UITableView alloc] initWithFrame:CGRectMake(0, 102, ScreenWidth, ScreenHeight - 102 -49)];
+    _tableview.rowHeight = kHvertical(257);
+    [_tableview setDelegate:self];
+    [_tableview setDataSource:self];
+    _tableview.separatorStyle = NO;
+    [_tableview registerClass:[InterviewTableViewCell class] forCellReuseIdentifier:activityCellID];
+    [self.view addSubview:_tableview];
+}
+-(void)requestActivityData{
+    [self.loadData downloadWithUrl:[NSString stringWithFormat:@"%@cao/findapi.php?findkey=eventall",urlHeader120] parameters:nil complicate:^(BOOL success, id data) {
+        if (success) {
+            NSArray *tempArr = data;
+            for (NSDictionary *tempDic in tempArr) {
+                ChildActivityModel *model = [ChildActivityModel modelWithDictionary:tempDic];
+                [self.activityDataArr addObject:model];
+
+            }
+        }
+        [_tableview reloadData];
+    }];
+}
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _activityDataArr.count;
+}
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    InterviewTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:activityCellID forIndexPath:indexPath];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    [cell relayoutActivityDataWithModel:self.activityDataArr[indexPath.row]];
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    ActivityDetailViewController *VC = [[ActivityDetailViewController alloc] init];
+    VC.hidesBottomBarWhenPushed = YES;
+    [self.navigationController pushViewController:VC animated:YES];
+
+}
+@end

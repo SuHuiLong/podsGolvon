@@ -1,0 +1,24 @@
+//
+//  TourismHeaderView.m
+//  podsGolvon
+//
+//  Created by apple on 2016/12/19.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "TourismHeaderView.h"
+
+@interface TourismHeaderView ()
+@end
+
+@implementation TourismHeaderView
+
+-(instancetype)initWithFrame:(CGRect)frame{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self createHeader];
+    }
+    return self;
+}
+-(void)createHeader{}
+@end

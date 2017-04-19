@@ -1,0 +1,31 @@
+//
+//  DetailComment.h
+//  ZhuanFang
+//
+//  Created by 李盼盼 on 16/4/7.
+//  Copyright © 2016年 李盼盼. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "CommentModel.h"
+#import "Header.h"
+#import "ChildCommentModel.h"
+
+@interface DetailComment : UITableViewCell
+@property (strong, nonatomic) UIButton *headerImage;
+@property (strong, nonatomic) UIButton *nickName;
+@property (strong ,nonatomic) UILabel *timeLabel;
+@property (strong, nonatomic) UILabel *commentLabel;
+
+@property (strong, nonatomic) UILabel *zanshu;
+@property (strong, nonatomic) UIButton *zanBtn;
+
+@property (strong, nonatomic) UIImageView *zanview;
+
+@property (strong, nonatomic) UIButton *button;
+@property (strong, nonatomic) UILabel *reaply;
+
+//-(void)realoadDataWith:(CommentModel *)model;
+-(void)realoadDataWith:(ChildCommentModel *)model;
+
+@end

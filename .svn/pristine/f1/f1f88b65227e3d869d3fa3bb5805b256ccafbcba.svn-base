@@ -1,0 +1,121 @@
+//
+//  RecommendViewController.m
+//  FindModule
+//
+//  Created by apple on 2016/12/1.
+//  Copyright © 2016年 apple. All rights reserved.
+//
+
+#import "RecommendViewController.h"
+#import "RecomentTableViewCell.h"
+#import "RecomentOtherCell.h"
+#import "RecomentInterviewCell.h"
+#import "LBBanner.h"
+
+
+@interface RecommendViewController ()<UITableViewDelegate,UITableViewDataSource,LBBannerDelegate>
+@property (nonatomic, strong) UITableView   *tableview;
+@property (nonatomic, strong) LBBanner  *banner;
+
+@end
+static NSString *cellID = @"RecomentTableViewCell";
+static NSString *interViewID = @"RecomentInterviewCell";
+static NSString *otherID = @"RecomentOtherCell";
+
+@implementation RecommendViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.automaticallyAdjustsScrollViewInsets = NO;
+
+    [self createTableview];
+
+}
+-(void)createBanner{
+    
+    NSArray * imageURLArray = @[@"http://i4.piimg.com/567571/5bb2bd5f3d9ed1c9.jpg", @"http://i4.piimg.com/567571/0747e4dc1a1e5cc2.jpg", @"http://i4.piimg.com/567571/2245e6c27d0435dd.jpg", @"http://i4.piimg.com/567571/740fdc787945b551.jpg"];
+    
+    _banner = [[LBBanner alloc] initWithImageURLArray:imageURLArray andFrame:CGRectMake(0, 0, ScreenWidth ,kHvertical(169))];
+    _banner.delegate = self;
+    _banner.pageTurnTime = 3.0;
+    
+    UIView *normal = [[UIView alloc] init];
+    normal.frame = CGRectMake(0, 0, 6, 6);
+    normal.backgroundColor = [UIColor colorWithWhite:1 alpha:0.7];
+    normal.clipsToBounds = YES;
+    normal.layer.cornerRadius = 3;
+    
+    UIView *blackView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 6, 6)];
+    blackView.backgroundColor = localColor;
+    blackView.clipsToBounds = YES;
+    blackView.layer.cornerRadius = 3;
+
+    [_banner customPageControlWithNormalPageView:normal andCurrentPageView:blackView andPageViewPadding:3];
+    
+}
+-(void)createTableview{
+    
+    [self createBanner];
+    
+    self.tableview = [[UITableView alloc] initWithFrame:CGRectMake(0, 102, ScreenWidth, ScreenHeight - 102-49) style:UITableViewStylePlain];
+    _tableview.tableHeaderView = _banner;
+    [_tableview registerClass:[RecomentTableViewCell class] forCellReuseIdentifier:cellID];
+    [_tableview registerClass:[RecomentInterviewCell class] forCellReuseIdentifier:interViewID];
+    [_tableview registerClass:[RecomentOtherCell class] forCellReuseIdentifier:otherID];
+    [self.tableview setDelegate:self];
+    [self.tableview setDataSource:self];
+    [self.view addSubview:_tableview];
+    
+}
+
+
+
+#pragma mark ---- UITableViewDelegate && UITableViewDataSource
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 1;
+}
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 5;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return kHvertical(5);
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    switch (indexPath.section) {
+        case 0:
+            return kHvertical(60);
+            break;
+        case 1:
+            return kHvertical(238);
+            break;
+            
+        default:
+            return kHvertical(297);
+            break;
+    }
+}
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.section == 0) {
+        RecomentTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID forIndexPath:indexPath];
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        return cell;
+    }else if (indexPath.section == 1){
+        RecomentInterviewCell *interCell = [tableView dequeueReusableCellWithIdentifier:interViewID forIndexPath:indexPath];
+        interCell.selectionStyle = UITableViewCellSelectionStyleNone;
+        return interCell;
+    }
+    
+    RecomentOtherCell *otherCell = [tableView dequeueReusableCellWithIdentifier:otherID forIndexPath:indexPath];
+    otherCell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return otherCell;
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+
+}
+
+#pragma mark ---- bannerDelegate
+- (void)banner:(LBBanner *)banner didClickViewWithIndex:(NSInteger)index {
+    NSLog(@"点击了第几个广告:%ld", index);
+}
+@end

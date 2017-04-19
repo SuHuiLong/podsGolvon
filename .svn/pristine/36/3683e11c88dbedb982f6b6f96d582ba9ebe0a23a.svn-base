@@ -1,0 +1,19 @@
+//
+//  ChildInterviewModel.h
+//  podsGolvon
+//
+//  Created by apple on 2016/12/20.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface ChildInterviewModel : NSObject
+@property (copy, nonatomic) NSString *pic;
+@property (copy, nonatomic) NSString *describe;
+@property (copy, nonatomic) NSString *time;
+@property (copy, nonatomic) NSString *clikenum;
+@property (copy, nonatomic) NSString *readnum;
+@property (copy, nonatomic) NSString *vid;
+@property (copy, nonatomic) NSString *url;
+@end

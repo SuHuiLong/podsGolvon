@@ -1,0 +1,114 @@
+//
+//  AddByInputViewController.m
+//  podsGolvon
+//
+//  Created by SHL on 2016/12/27.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "AddByInputViewController.h"
+#import "AddByInputTableViewCell.h"
+
+@interface AddByInputViewController ()<UITableViewDelegate,UITableViewDataSource,UITextFieldDelegate>
+
+@property(nonatomic,copy)UITableView *mainTableView;
+@end
+
+@implementation AddByInputViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+}
+
+-(void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    
+}
+
+#pragma mark - createView
+-(void)createView{
+    [self createTableView];
+}
+
+-(void)createTableView{
+    UITableView *mainTableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 64+kHvertical(45), ScreenWidth, ScreenHeight - kHvertical(45)-64) style:UITableViewStylePlain];
+    mainTableView.delegate = self;
+    mainTableView.dataSource = self;
+    [mainTableView registerClass:[AddByInputTableViewCell class] forCellReuseIdentifier:@"AddByInputTableViewCell"];
+    mainTableView.backgroundColor = GPColor(238, 239, 241);
+    mainTableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [self.view addSubview:mainTableView];
+    _mainTableView = mainTableView;
+}
+
+
+#pragma mark - tableview代理
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 3;
+}
+
+
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return kHvertical(98);
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return kHvertical(30);
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    AddByInputTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"AddByInputTableViewCell" forIndexPath:indexPath];
+    cell.nickName.delegate = self;
+    cell.phoneNumber.delegate = self;
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+
+-(UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    
+    UIView *headerView = [Factory createViewWithBackgroundColor:GPColor(238, 239, 241) frame:CGRectMake(0, 0, ScreenWidth, kHvertical(30))];
+    UILabel *titleLable = [Factory createLabelWithFrame:CGRectMake(kWvertical(13), 0, 0, kHvertical(30)) textColor:rgba(123,123,123,1) fontSize:kHorizontal(13) Title:@"添加联系人"];
+    [titleLable sizeToFitSelf];
+    
+    UILabel *alertLabel = [Factory createLabelWithFrame:CGRectMake(titleLable.x_width, 0, ScreenWidth/2, kHvertical(30)) textColor:rgba(199,199,199,1) fontSize:kHorizontal(11) Title:@"(*号为必填项)"];
+
+    [headerView addSubview:titleLable];
+    [headerView addSubview:alertLabel];
+    return headerView;
+}
+
+#pragma mark - textfeild代理
+-(void)textFieldDidBeginEditing:(UITextField *)textField{
+    UITableViewCell *cell = (UITableViewCell *)textField.superview.superview;
+    NSIndexPath *indexPath = [_mainTableView indexPathForCell:cell];
+
+    if (indexPath.row>0) {
+        [_mainTableView setContentOffset:CGPointMake(0,kHvertical(98)) animated:YES];
+    }else{
+        [_mainTableView setContentOffset:CGPointMake(0,0) animated:YES];
+    }
+}
+
+
+
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

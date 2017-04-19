@@ -1,0 +1,298 @@
+//
+//  Self_P_ViewController.m
+//  Golvon
+//
+//  Created by 李盼盼 on 16/3/23.
+//  Copyright © 2016年 李盼盼. All rights reserved.
+//
+
+#import "Self_P_ViewController.h"
+#import "DownLoadDataSource.h"
+#import "SelfPhotoCollection.h"
+//#import "PhotoViewController.h"
+#import "JZAlbumViewController.h"
+#import "AddSelfPhotosViewController.h"
+@interface Self_P_ViewController ()<UICollectionViewDataSource, UICollectionViewDelegate,UICollectionViewDelegateFlowLayout>
+
+@property (strong, nonatomic) NSMutableArray *dataArr;
+@property (strong, nonatomic) DownLoadDataSource *loadData;
+
+@property(nonatomic,strong)NSMutableArray *PhotoArr;
+@property(nonatomic,strong)NSMutableArray *AllPhotoArr;
+@property(nonatomic,strong)NSMutableArray *PhotoDesc;
+@property(nonatomic,strong)NSMutableArray *PhotoDate;
+@property(nonatomic,strong)NSMutableArray *PhotoId;
+
+
+
+@end
+
+@implementation Self_P_ViewController
+
+-(NSMutableArray *)PhotoDate{
+    if (_PhotoDate == nil) {
+        _PhotoDate = [NSMutableArray array];
+    }
+    return _PhotoDate;
+}
+
+-(NSMutableArray *)PhotoId{
+    if (_PhotoId == nil) {
+        _PhotoId = [NSMutableArray array];
+    }
+    return _PhotoId;
+}
+
+-(NSMutableArray *)PhotoDesc{
+    if (_PhotoDesc == nil) {
+        _PhotoDesc = [NSMutableArray array];
+    }
+    return _PhotoDesc;
+}
+
+-(NSMutableArray *)AllPhotoArr{
+    if (_AllPhotoArr == nil) {
+        _AllPhotoArr = [NSMutableArray array];
+    }
+    return _AllPhotoArr;
+}
+
+
+-(DownLoadDataSource *)loadData{
+    if (!_loadData) {
+        _loadData = [[DownLoadDataSource alloc]init];
+    }
+    return _loadData;
+}
+
+-(NSMutableArray *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [[NSMutableArray alloc]init];
+    }
+    return _dataArr;
+}
+
+- (instancetype)initWithNameID:(NSString *)nameID{
+    if (self = [super init]) {
+        self.nameID = nameID;
+    }
+    return self;
+}
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBarHidden = NO;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self createNav];
+    [self createUI];
+    self.view.backgroundColor = [UIColor colorWithRed:245.0f/256.0f green:245.0f/256.0f blue:245.0f/256.0f alpha:1];
+}
+
+-(void)createNav{
+    
+    _navView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 64)];
+    _navView.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:_navView];
+    
+    UILabel *titleLabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 35, ScreenWidth, 15)];
+    titleLabel.text = @"相册";
+    titleLabel.textAlignment = NSTextAlignmentCenter;
+    
+    if (self.view.frame.size.height <= 568)
+    {
+        titleLabel.font = [UIFont boldSystemFontOfSize:kHorizontal(20)];
+        
+    }
+    else if (self.view.frame.size.height > 568 && self.view.frame.size.height <= 667)
+    {
+        
+        titleLabel.font = [UIFont boldSystemFontOfSize:kHorizontal(18)];
+    }else{
+        
+        titleLabel.font = [UIFont boldSystemFontOfSize:kHorizontal(17)];
+        
+    }
+    [_navView addSubview:titleLabel];
+    
+    
+    _backBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    _backBtn.backgroundColor = [UIColor clearColor];
+    _backBtn.frame = CGRectMake(0, 20, 44, 44);
+    
+    UIImageView *backImage = [[UIImageView alloc] initWithFrame:CGRectMake(9, 13, 19, 19)];
+    backImage.image = [UIImage imageNamed:@"返回"];
+    [_backBtn addSubview:backImage];
+    
+    [_backBtn addTarget:self action:@selector(pressesBack) forControlEvents:UIControlEventTouchUpInside];
+    [_navView addSubview:_backBtn];
+    
+    UIView *line = [[UIView alloc] initWithFrame:CGRectMake(0, 63, ScreenWidth, 1)];
+    line.backgroundColor = GPColor(212, 213, 214);
+    [_navView addSubview:line];
+    
+    [self.view addSubview:_navView];
+}
+
+-(void)createUI{
+    
+    _layout = [[UICollectionViewFlowLayout alloc]init];
+    _layout.itemSize = CGSizeMake(ScreenWidth * 0.328, ScreenHeight * 0.184);
+    _layout.minimumLineSpacing = 3;
+    _layout.minimumInteritemSpacing = 0;
+    _layout.scrollDirection = UICollectionViewScrollDirectionVertical;
+    //    _layout.
+    
+    _imageCollection = [[UICollectionView alloc]initWithFrame:CGRectMake(0,HScale(1) + 64, ScreenWidth, ScreenHeight - HScale(1) - 64) collectionViewLayout:_layout];
+    [_imageCollection registerClass:[SelfPhotoCollection class] forCellWithReuseIdentifier:@"SelfPhotoCollection"];
+    _imageCollection.backgroundColor = [UIColor whiteColor];
+    _imageCollection.dataSource = self;
+    _imageCollection.delegate = self;
+    [self.view addSubview:_imageCollection];
+    [self downLoad];
+}  
+-(void)downLoad{
+    NSDictionary *dict = @{
+                           @"name_id":_nameID
+                           };
+
+    
+    [self.loadData downloadWithUrl:[NSString stringWithFormat:@"%@Golvon/select_picture_all_user",urlHeader120] parameters:dict complicate:^(BOOL success, id data) {
+        if (success) {
+                self.PhotoArr = [NSMutableArray array];
+                self.PhotoDesc = [NSMutableArray array];
+                self.PhotoId = [NSMutableArray array];
+                self.PhotoDate = [NSMutableArray array];
+                NSArray *dataArry = [data objectForKey:@"data"];
+                
+                _AllPhotoArr = [NSMutableArray array];
+                
+                for (NSDictionary *dataDic in dataArry) {
+                    NSMutableString *upload_tiem = [NSMutableString stringWithFormat:@"%@",[dataDic objectForKey:@"upload_tiem"]];
+                    [upload_tiem replaceCharactersInRange:NSMakeRange(4, 1) withString:@"年"];
+                    [upload_tiem replaceCharactersInRange:NSMakeRange(7, 1) withString:@"月"];
+                    [upload_tiem replaceCharactersInRange:NSMakeRange(10, 1) withString:@"日 "];
+                    [upload_tiem deleteCharactersInRange:NSMakeRange(17, upload_tiem.length-17)];
+                    [_AllPhotoArr addObject:dataDic];
+                    [self.PhotoArr insertObject:[dataDic objectForKey:@"picture_url"] atIndex:0];
+                    [self.PhotoDesc insertObject:[dataDic objectForKey:@"picture_name"]atIndex:0];
+                    [self.PhotoId insertObject:[dataDic objectForKey:@"picture_id"] atIndex:0];
+                    [self.PhotoDate insertObject:upload_tiem atIndex:0];
+                }
+
+//            NSDictionary *dic = data;
+//            for (NSDictionary *temp in dic[@"data"]) {
+//                PhotoModel *model = [PhotoModel pareFromDictionary:temp];
+//
+//                [self.dataArr insertObject:model atIndex:0];
+////                [self.dataArr addObject:model];
+//            }
+            [_imageCollection reloadData];
+        }
+    }];
+}
+-(void)pressesBack{
+    
+    [self.navigationController popViewControllerAnimated:NO];
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    if (_nameID == userDefaultId) {
+        if (indexPath.row == 0) {
+            
+            AddSelfPhotosViewController *avc = [[AddSelfPhotosViewController alloc] init];
+            avc.hidesBottomBarWhenPushed = YES;
+            [self.navigationController pushViewController:avc animated:YES];
+            
+        }else{
+            
+            NSMutableArray *dataArry = [NSMutableArray array];
+            
+            [dataArry insertObject:_AllPhotoArr[indexPath.row-1] atIndex:0];
+            
+            JZAlbumViewController *jvc = [[JZAlbumViewController alloc] init];
+            jvc.currentIndex =0;//这个参数表示当前图片的index，默认是0
+            jvc.dateArr = self.PhotoDate;
+            jvc.imgId = self.PhotoId;
+            jvc.descArr = self.PhotoDesc;
+            jvc.imgArr = self.PhotoArr;//图片数组，可以是url，也可以是UIImage
+            jvc.currentIndex = indexPath.row-1;
+            jvc.nameId = self.nameID;
+            
+            [self presentViewController:jvc animated:YES completion:^{
+                
+                NSMutableArray *viewControllers = [self.navigationController.viewControllers mutableCopy];
+                [viewControllers removeLastObject];
+                self.navigationController.viewControllers = viewControllers;
+                
+            }];
+            
+        }
+
+    }else{
+        NSMutableArray *dataArry = [NSMutableArray array];
+        
+        [dataArry insertObject:_AllPhotoArr[indexPath.row] atIndex:0];
+        
+        JZAlbumViewController *jvc = [[JZAlbumViewController alloc] init];
+        jvc.currentIndex =0;//这个参数表示当前图片的index，默认是0
+        jvc.dateArr = self.PhotoDate;
+        jvc.imgId = self.PhotoId;
+        jvc.descArr = self.PhotoDesc;
+        jvc.imgArr = self.PhotoArr;//图片数组，可以是url，也可以是UIImage
+        jvc.currentIndex = indexPath.row;
+        jvc.nameId = self.nameID;
+        
+        [self presentViewController:jvc animated:YES completion:^{
+            
+            NSMutableArray *viewControllers = [self.navigationController.viewControllers mutableCopy];
+            [viewControllers removeLastObject];
+            self.navigationController.viewControllers = viewControllers;
+            
+        }];
+    }
+}
+
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    if (_nameID == userDefaultId) {
+        
+        return _dataArr.count + 1;
+    }
+    return _dataArr.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    
+//    if (_nameID == userDefaultId) {
+//        SelfPhotoCollection *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"SelfPhotoCollection" forIndexPath:indexPath];
+//        
+//        if (indexPath.row == 0) {
+//            cell.image.image = [UIImage imageNamed:@"UploadPhoto"];
+//        }else{
+//            [cell relayoutWithModel:_dataArr[indexPath.row-1]];
+//            cell.backgroundColor = [UIColor whiteColor];
+//        }
+//        return cell;
+//    }
+     SelfPhotoCollection *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"SelfPhotoCollection" forIndexPath:indexPath];
+//    [cell relayoutWithModel:_dataArr[indexPath.row]];
+    cell.backgroundColor = [UIColor whiteColor];
+    return cell;
+}
+-(UIEdgeInsets)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout insetForSectionAtIndex:(NSInteger)section{
+    return UIEdgeInsetsMake(HScale(0.2), 0, 0, 0);
+}
+
+
+- (BOOL)shouldAutorotate{
+    return YES;
+}
+
+-(UIInterfaceOrientation)preferredInterfaceOrientationForPresentation{
+    
+    return UIInterfaceOrientationPortrait;
+    
+}
+
+
+@end

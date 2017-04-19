@@ -1,0 +1,939 @@
+//
+//  PublishPhotoViewController.m
+//  podsGolvon
+//
+//  Created by suhuilong on 16/8/26.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import "PublishPhotoViewController.h"
+#import "PublishCollectionViewCell.h"
+#import "ShlTextView.h"
+#import "ChoicePhotoViewController.h"
+#import "ReviewPhotosViewController.h"
+#import <AssetsLibrary/AssetsLibrary.h>
+#import "PublishPhotoHeader.h"
+#import "PublishPhotoFooter.h"
+#import "BallParkSelectModel.h"
+#import "PublishSelectAddressViewController.h"
+#import "HomePageViewController.h"
+#import "TotalPhotoViewController.h"
+
+#import "TZImagePickerController.h"
+#import "TZVideoPlayerController.h"
+#import <Photos/Photos.h>
+
+#import "EmojiKeybordView.h"
+#import "ImageTool.h"
+
+
+
+@interface PublishPhotoViewController ()<UICollectionViewDelegate,UICollectionViewDataSource,UITextViewDelegate,UINavigationControllerDelegate, UIImagePickerControllerDelegate,TZImagePickerControllerDelegate>{
+    //文本框
+    ShlTextView *_textView;
+    //表情键盘
+    EmojiKeybordView *_emojiView;
+    //选择图标
+    UIButton *_KeybordEmojiIcon;
+    
+    //提示框
+    MBProgressHUD *_HUB;
+    //系统键盘高度
+    CGFloat _systemKeybordHeight;
+    NewAlertView *_alertView;//超出文字提示界面
+
+    NSThread *_emojiThread;
+    
+    BOOL _canPop;
+}
+
+@property(nonatomic,strong)UICollectionView  *mainCollectionView;
+//位置信息
+@property(nonatomic,copy)NSString  *locationStr;
+//所有球场信息
+@property(nonatomic,strong)NSMutableArray  *PlaceDataSouce;
+
+/**
+ *  0 直接隐藏
+ 1 键盘切换至表情
+ 2 表情切换至键盘
+ */
+@property(nonatomic,assign)NSInteger hidnKeybordType;
+
+//带切换按钮的View
+@property(nonatomic,strong)UIView *emojiKeybordView;
+
+//
+@property (assign, nonatomic) BOOL    isEmojiBtn;
+
+
+
+@end
+
+@implementation PublishPhotoViewController
+
+
+-(NSMutableArray *)dataArry{
+    if (!_dataArry) {
+        _dataArry = [NSMutableArray array];
+    }
+    return _dataArry;
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBarHidden = YES;
+    _emojiKeybordView.hidden = YES;
+}
+-(void)viewDidAppear:(BOOL)animated{
+    [super viewDidAppear:animated];
+
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    if (!_dataArry) {
+        [self.dataArry addObject:@"PublishAdd"];
+    }
+}
+-(void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    [UIView setAnimationsEnabled:YES];
+}
+
+#pragma mark - CreateView
+-(void)createView{
+    [self createNavigationView];
+    [self createCollectionView];
+    [self createBackView];
+//    __weak typeof(self) weakself = self;
+
+//    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0),^{
+//        [self createEmojiView];
+//    });
+
+//    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+    //        [self createEmojiView];
+//        _canPop = true;
+//    });
+//    _emojiThread = [[NSThread alloc] initWithTarget:self selector:@selector(myThreadMainMethod) object:nil];
+//    [_emojiThread start];
+}
+//
+-(void)myThreadMainMethod{
+//        [self createEmojiView];
+//        _canPop = true;
+//        if ([NSThread currentThread].isCancelled) {
+//            [NSThread exit];
+//        }
+}
+
+
+-(void)viewDidDisappear:(BOOL)animated{
+    [super viewDidDisappear:animated];
+}
+
+//创建上导航
+-(void)createNavigationView{
+    UserTopNavigation *vc = [[UserTopNavigation alloc] init];
+    UILabel *cancelLel = [Factory createLabelWithFrame:CGRectMake(kWvertical(11.5), kHvertical(35), kWvertical(60), kHvertical(14.5)) textColor:GPColor(20, 21, 22) fontSize:kHorizontal(15) Title:@"取消"];
+    UILabel *sendLabel = [Factory createLabelWithFrame:CGRectMake(WScale(15) - kWvertical(41.5), kHvertical(35),  kWvertical(60), kHvertical(14.5))  textColor:BlackColor fontSize:kHorizontal(15) Title:@"发送"];
+//
+    [vc.rightBtn addTarget:self action:@selector(sendClick) forControlEvents:UIControlEventTouchUpInside];
+    [vc.leftBtn addTarget:self action:@selector(cancelClick) forControlEvents:UIControlEventTouchUpInside];
+
+    
+    [vc createLeftWithImage:cancelLel];
+    [vc createRightWithImage:sendLabel];
+    [vc createTitleWith:@"发布动态"];
+    [self.view addSubview:vc];
+}
+//创建collectionView
+-(void)createCollectionView{
+    UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
+    
+    _mainCollectionView = [[UICollectionView alloc] initWithFrame:CGRectMake(0, 64, ScreenWidth, ScreenHeight-64) collectionViewLayout:layout];
+    _mainCollectionView.alwaysBounceVertical = YES;
+    [self.view addSubview:_mainCollectionView];
+    _mainCollectionView.backgroundColor = [UIColor clearColor];
+    _mainCollectionView.delaysContentTouches = NO;
+    [_mainCollectionView registerClass:[PublishCollectionViewCell class] forCellWithReuseIdentifier:@"PublishCollectionViewCellId"];    
+    [_mainCollectionView registerClass:[PublishPhotoHeader class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"PublishCollectionHeaderViewId"];
+    [_mainCollectionView registerClass:[PublishPhotoFooter class] forSupplementaryViewOfKind:UICollectionElementKindSectionFooter withReuseIdentifier:@"PublishCollectionFooterViewId"];
+    _mainCollectionView.backgroundColor = WhiteColor;
+    _mainCollectionView.delegate = self;
+    _mainCollectionView.dataSource = self;
+}
+
+//浅色背景
+-(void)createBackView{
+    UIView *bView = [[UIView alloc] initWithFrame:CGRectMake(0, ScreenHeight/2, ScreenWidth, ScreenHeight)];
+    bView.backgroundColor = GPColor(241, 243, 249);
+    [self.mainCollectionView addSubview:bView];
+}
+
+
+//创建表情键盘
+-(void)createEmojiView{
+    
+    _emojiKeybordView = [Factory createViewWithBackgroundColor:WhiteColor frame:CGRectMake(0, ScreenHeight, ScreenWidth, kHvertical(44)+kHvertical(216))];
+    _KeybordEmojiIcon = [[UIButton alloc] initWithFrame:CGRectMake(ScreenWidth - kWvertical(44), 0, kWvertical(44), kHvertical(44))];
+    [self.view addSubview:_emojiKeybordView];
+    [_KeybordEmojiIcon addTarget:self action:@selector(clickToEmojiIcon:) forControlEvents:UIControlEventTouchUpInside];
+    [_KeybordEmojiIcon setImage:[UIImage imageNamed:@"EmojiKeybord"] forState:UIControlStateNormal];
+    [_KeybordEmojiIcon setImage:[UIImage imageNamed:@"KeybordEmojiIcon"] forState:UIControlStateSelected];
+    
+    _KeybordEmojiIcon.imageEdgeInsets = UIEdgeInsetsMake(kWvertical(10), kHvertical(10), kWvertical(10), kHvertical(10));
+    _KeybordEmojiIcon.selected  = NO;
+    [_emojiKeybordView addSubview:_KeybordEmojiIcon];
+    
+    _emojiView = [[EmojiKeybordView alloc] initWithFrame:CGRectMake(0, kHvertical(44), ScreenWidth, kHvertical(216))];
+    __weak __typeof(self)weakSelf = self;
+    _emojiView.selectEmoji = ^(id select){
+        [weakSelf textViewChange:select];
+    };
+    [_emojiView.sendBtn setTitle:@"完成" forState:UIControlStateNormal];
+    [_emojiView.sendBtn addTarget:self action:@selector(hidnKeybord) forControlEvents:UIControlEventTouchUpInside];
+    [_emojiKeybordView addSubview:_emojiView];
+    
+}
+#pragma mark - 请求数据
+-(void)initData{
+    NSString *lat = [userDefaults objectForKey:@"latitude"];
+    NSString *lon = [userDefaults objectForKey:@"longitude"];
+    if (!lat) {
+        lat = @"0.0";
+        lon = @"0.0";
+    }
+    __weak typeof(self) weakself = self;
+    DownLoadDataSource *manager = [[DownLoadDataSource alloc] init];
+    NSDictionary *dict = @{
+                           @"jingdu":lon,
+                           @"weidu":lat
+                           };
+    [manager downloadWithUrl:[NSString stringWithFormat:@"%@Golvon/select_qiuchang_all",urlHeader120] parameters:dict complicate:^(BOOL success, id data) {
+        if (success) {
+            NSDictionary *dic = data;
+            weakself.PlaceDataSouce = [NSMutableArray array];
+            for (NSDictionary *temp in dic[@"data"]) {
+                
+                BallParkSelectModel *model = [BallParkSelectModel paresFromDictionary:temp];
+                [weakself.PlaceDataSouce addObject:model];
+            }
+            
+            [weakself.mainCollectionView reloadData];
+        }
+    }];
+}
+//表情键盘操作
+-(void)textViewChange:(NSString *)emojiStr{
+    
+    NSString *mStr = _textView.text;
+    NSString *mStr1;
+    BOOL isEmoji = NO;
+    
+    if ([emojiStr isEqualToString:@"EmojiDeleat"]) {
+        if ([mStr length]==0) {
+            return;
+        }
+        if ([mStr length]>=2) {
+            mStr1 = [mStr substringWithRange:NSMakeRange(mStr.length-2, 2)];
+            isEmoji = [self isEmoji:mStr1];
+        }
+        
+        mStr = [mStr substringToIndex:mStr.length-1];
+        if (isEmoji) {
+            mStr = [mStr substringToIndex:mStr.length-1];
+        }
+    }else{
+        mStr = [NSMutableString stringWithFormat:@"%@%@", _textView.text,emojiStr];
+    }
+    _textView.text = mStr;
+    [_textView textViewDidChange:mStr];
+}
+
+//判断Emoji
+- (BOOL)isEmoji:(NSString *)emoji {
+    const unichar high = [emoji characterAtIndex: 0];
+//     Surrogate pair (U+1D000-1F77F)
+    if (0xd800 <= high && high <= 0xdbff) {
+        const unichar low = [emoji characterAtIndex: 1];
+        const int codepoint = ((high - 0xd800) * 0x400) + (low - 0xdc00) + 0x10000;
+        return (0x1d000 <= codepoint && codepoint <= 0x1f77f);
+        // Not surrogate pair (U+2100-27BF)
+    } else {
+        return (0x2100 <= high && high <= 0x27bf);
+    }
+}
+
+
+#pragma mark - 点击事件
+//返回
+-(void)cancelClick{
+
+//    if (_canPop) {
+        [self.navigationController popViewControllerAnimated:YES];
+//    }
+    
+}
+//发送
+-(void)sendClick{
+//    [self createHUB];
+    
+    NSString *textViewStr = _textView.text;
+    if (textViewStr.length==0&&_dataArry.count==1) {
+        return;
+    }
+    
+    _HUB = [MBProgressHUD showHUDAddedTo:[[UIApplication sharedApplication].windows firstObject] animated:YES];
+    _HUB.mode = MBProgressHUDModeIndeterminate;
+    _HUB.label.text = @"发布中...";
+    
+    _emojiKeybordView.hidden = YES;
+    [_textView resignFirstResponder];
+    
+    [NSThread detachNewThreadSelector:@selector(sizePhotos:) toTarget:self withObject:nil];
+
+    
+    
+}
+
+//新的线程里面处理
+-(void)sizePhotos:(NSThread *)thread{
+
+
+    NSMutableArray *photoArray = [NSMutableArray array];
+    if (_dataArry.count==1) {
+        [self postData:photoArray];
+    }
+    
+    for (int i = 0; i<_dataArry.count-1; i++) {
+        if ([_dataArry[i] isKindOfClass:[NSData class]]) {
+            NSData *headImageData = _dataArry[i];
+            
+            [photoArray addObject:headImageData];
+            
+            if (photoArray.count == _dataArry.count-1) {
+                [self postData:photoArray];
+            }
+        }else{
+            
+            BOOL original = YES;//原图
+            PHAsset *asset = _photoImageArray[i];
+            CGSize size = original ? CGSizeMake(asset.pixelWidth, asset.pixelHeight) : CGSizeZero;
+            
+            PHImageRequestOptions *options = [[PHImageRequestOptions alloc] init];
+            // 同步获得图片, 只会返回1张图片
+            options.synchronous = YES;
+            
+            [[PHImageManager defaultManager] requestImageForAsset:asset targetSize:size contentMode:PHImageContentModeDefault options:options resultHandler:^(UIImage * _Nullable result, NSDictionary * _Nullable info) {
+                UIImage *image = result;    //原图
+                NSData *imageData;
+                CGFloat imageHeight = image.size.height;
+                CGFloat imageWidth  = image.size.width;
+                CGFloat scale = imageHeight/imageWidth;     //裁剪比例
+                UIImage *resizedImage;      //裁剪之后的图
+                if (scale<1) {
+                    if (imageWidth > 1920) {
+                        
+                        resizedImage = [UIImage scaleToSize:image size:CGSizeMake(1920, 1920*scale)];
+                        
+                    }else{
+                        
+                        resizedImage = [UIImage scaleToSize:image size:CGSizeMake(imageWidth, imageHeight)];
+                    }
+                }
+                if (scale>1) {
+                    if (imageHeight > 1920) {
+                        
+                        resizedImage = [UIImage scaleToSize:image size:CGSizeMake(1920/scale, 1920)];
+                        
+                    }else{
+                        
+                        resizedImage = [UIImage scaleToSize:image size:CGSizeMake(imageWidth, imageHeight)];
+                        
+                    }
+                }
+                if (scale == 1) {
+                    if (imageHeight > 1920) {
+                        
+                        resizedImage = [UIImage scaleToSize:image size:CGSizeMake(1920, 1920)];
+                        
+                    }else{
+                        
+                        resizedImage = [UIImage scaleToSize:image size:CGSizeMake(imageWidth, imageHeight)];
+                        
+                    }
+                }
+                imageData = UIImageJPEGRepresentation(resizedImage, 0.7);
+                
+                [photoArray addObject:imageData];
+                NSLog(@"压缩后的大小%ld KB",imageData.length/1000);
+
+                if (photoArray.count == _dataArry.count-1) {
+                    [self postData:photoArray];
+                }
+                
+            }];
+            
+        }
+    }
+    
+    [thread cancel];
+}
+
+
+//提交数据
+-(void)postData:(NSMutableArray *)photoArray{
+    
+    NSString *dynamicContent = _textView.text;
+    NSString *havePhoto = @"0";
+    if (photoArray.count>0) {
+        havePhoto = @"1";
+    }
+    __weak typeof(self) weakself = self;
+    DownLoadDataSource *managers = [[DownLoadDataSource alloc] init];
+    NSDictionary *dict = @{
+                           @"name_id":userDefaultId,
+                           @"content":dynamicContent,
+                           @"hasphoto":havePhoto,
+                           @"position":_locationStr
+                           };
+    
+    [managers downloadWithUrl:[NSString stringWithFormat:@"%@cofapi.php?func=newdyn",apiHeader120] parameters:dict complicate:^(BOOL success, id data) {
+        if (success) {
+            NSDictionary *dataDict = [NSDictionary dictionaryWithDictionary:data];
+            NSString *did = [dataDict objectForKey:@"did"];
+            if (![did isEqualToString:@"0"]) {
+                
+                if (photoArray.count == 0) {
+                    for (HomePageViewController *VC in self.navigationController.viewControllers) {
+                        if ([VC isKindOfClass:[HomePageViewController class]]) {
+                            VC.controllID = 2;
+                            [weakself.navigationController popViewControllerAnimated:YES];
+                        }
+                    }
+                }
+                AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
+                manager.responseSerializer = [AFHTTPResponseSerializer serializer];
+                manager.requestSerializer = [AFHTTPRequestSerializer serializer];
+                //接收类型不一致请替换一致text/html或别的
+                manager.responseSerializer.acceptableContentTypes = [NSSet setWithObjects:@"application/json",
+                                                                     @"text/html",
+                                                                     @"image/jpeg",
+                                                                     @"image/png",
+                                                                     @"application/octet-stream",
+                                                                     @"text/json",
+                                                                     @"text/plain",
+                                                                     @"multipart/form-data",
+                                                                     @"text/json",
+                                                                     nil];
+                
+                NSString *isend = @"1";
+                
+                NSDictionary *dict = @{
+                                       @"name_id":userDefaultId,
+                                       @"type":@"1",
+                                       @"did":did,
+                                       @"isend":isend
+                                       };
+                NSString *url = [NSString stringWithFormat:@"%@upload.php",apiHeader120];
+                
+                [manager POST:url parameters:dict constructingBodyWithBlock:^(id<AFMultipartFormData> _Nonnull formData) {
+                    
+                    for(NSInteger i = 0; i < photoArray.count; i++){
+                        NSData *imageData =photoArray[i];
+                        
+                        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+                        // 设置时间格式
+                        [formatter setDateFormat:@"yyyyMMddHHmmss"];
+                        NSString *dateString = [formatter stringFromDate:[NSDate date]];
+                        NSString *fileName = [NSString  stringWithFormat:@"%@.jpg", dateString];
+
+                        [formData appendPartWithFileData:imageData name:[NSString stringWithFormat:@"file%ld",i] fileName:fileName mimeType:@"image/jpeg"]; //
+                    }
+                    
+                } progress:^(NSProgress *_Nonnull uploadProgress) {
+                    //打印下上传进度
+//                    NSSLog(@"上传进度%@",uploadProgress);
+                } success:^(NSURLSessionDataTask *_Nonnull task, id _Nullable responseObject) {
+                    //上传成功
+                    [_HUB removeFromSuperview];
+
+                    NSError *error = nil;
+                    id data = [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:&error];
+                    NSString *code = data[@"code"];
+                    if ([code isEqualToString:@"1"]) {
+                        if (_popStaticsView) {
+                            [weakself.navigationController popViewControllerAnimated:YES];
+                        }else{
+                            for (HomePageViewController *VC in self.navigationController.viewControllers) {
+                                if ([VC isKindOfClass:[HomePageViewController class]]) {
+                                    VC.controllID = 2;
+                                    [weakself.navigationController popViewControllerAnimated:YES];
+                                }
+                            }
+                        }
+                    }
+                    
+                } failure:^(NSURLSessionDataTask *_Nullable task, NSError * _Nonnull error) {
+                    //上传失败
+                    [_HUB removeFromSuperview];
+                    [self alertShowView:@"上传失败"];
+                }];
+            }
+            //            }
+        }else{
+            [_HUB removeFromSuperview];
+            [self alertShowView:@"网络错误"];
+        }
+    }];
+    
+}//提示界面
+-(void)alertShowView:(NSString *)str{
+    
+    SucessView *sView = [[SucessView alloc] initWithFrame:CGRectMake(WScale(37.1), HScale(44.7), WScale(26.1), HScale(10.8)) imageImageName: @"失败" descStr: str];
+    [self.view addSubview:sView];
+    dispatch_time_t delayTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0/*延迟执行时间*/ * NSEC_PER_SEC));
+    
+    dispatch_after(delayTime, dispatch_get_main_queue(), ^{
+        [sView removeFromSuperview];
+    });
+    
+}
+//删除照片
+-(void)DeleatPhoto:(UIButton *)sender{
+    
+    UICollectionViewCell *cell = (UICollectionViewCell *)sender.superview.superview;
+    NSIndexPath *indexPath = [_mainCollectionView indexPathForCell:cell];
+    
+    [_dataArry removeObjectAtIndex:indexPath.item];
+    [_dataArry removeObject:@"PublishAdd"];
+    
+    NSData *data = [NSKeyedArchiver archivedDataWithRootObject:_dataArry];
+    [userDefaults setValue:data forKey:@"PublishPhotosArray"];
+    [_dataArry addObject:@"PublishAdd"];
+    [_photoImageArray removeObjectAtIndex:indexPath.item];
+    [_mainCollectionView reloadData];
+    
+}
+//选择位置
+-(void)selectLoaction{
+    if (_PlaceDataSouce) {
+        
+        [self PresentBollPark];
+        
+    }
+}
+-(void)clickToEmojiIcon:(UIButton *)sender{
+    sender.selected = !sender.selected;
+    _isEmojiBtn = YES;
+    if (sender.selected == YES) {
+        _emojiView.hidden = NO;
+        
+        [_textView resignFirstResponder];
+    }else{
+        
+        [_textView becomeFirstResponder];
+    }
+}
+
+#pragma mark - Delegate
+//textView长度改变
+-(void)textViewDidChange:(UITextView *)textView{
+    NSString *len = [NSString stringWithFormat:@"%lu",(unsigned long)textView.text.length];
+    int a = 600 - [len intValue];
+    NSLog(@"%ld",len);
+    if (a<=0) {
+        
+        NSString *str = [textView.text substringToIndex:600];
+        _textView.text = str;
+        a =0;
+        [self alertShowView:@"最多输入600字符"];
+    }
+
+    [_textView textViewDidChange:textView.text];
+    
+}
+
+//点击空白隐藏键盘
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event{
+    [_textView resignFirstResponder];
+    _isEmojiBtn = NO;
+}
+//滚动代理
+-(void)scrollViewDidScroll:(UICollectionView *)scrollView{
+    if (scrollView == _mainCollectionView) {
+        
+        if (_KeybordEmojiIcon.selected == YES) {
+            
+            _emojiKeybordView.hidden = YES;
+        }
+        
+        [_textView resignFirstResponder];
+        _isEmojiBtn = NO;
+        
+    }
+}
+-(void)hidnKeybord{
+    _isEmojiBtn = NO;
+    
+}
+
+
+#pragma mark collectionView代理方法
+//返回section个数
+- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView
+{
+    return 1;
+}
+
+//每个section的item个数
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
+{
+    if (_dataArry.count>6) {
+        return 6;
+    }
+    return _dataArry.count;
+}
+//collectionDlegate
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    PublishCollectionViewCell *cell = (PublishCollectionViewCell *)[collectionView dequeueReusableCellWithReuseIdentifier:@"PublishCollectionViewCellId" forIndexPath:indexPath];
+    [cell.deleatBtn addTarget:self action:@selector(DeleatPhoto:) forControlEvents:UIControlEventTouchUpInside];
+    
+    [cell configName:_dataArry[indexPath.item]];
+    return cell;
+}
+
+//设置每个item的尺寸
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    return CGSizeMake(kWvertical(80),kWvertical(80));
+}
+
+//header的size
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout referenceSizeForHeaderInSection:(NSInteger)section
+{
+    //设置headerView的尺寸大小
+    return CGSizeMake(self.view.width, kHvertical(86));
+}
+
+//footer的size
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout referenceSizeForFooterInSection:(NSInteger)section
+{
+    return CGSizeMake(self.view.width,  ScreenHeight/2);
+}
+
+//设置每个item的UIEdgeInsets
+- (UIEdgeInsets)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout insetForSectionAtIndex:(NSInteger)section
+{
+    
+    return UIEdgeInsetsMake(0, kWvertical(14), kHvertical(11), kWvertical(14));
+}
+
+//设置每个item水平间距
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
+{
+    return kWvertical(9);
+}
+
+
+//设置每个item垂直间距
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout minimumLineSpacingForSectionAtIndex:(NSInteger)section
+{
+    return kWvertical(9);
+}
+
+//设置HeaderView与FooterView “PublishCollectionHeaderViewId”
+- (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath
+{
+    if ([kind isEqualToString:UICollectionElementKindSectionHeader]) {
+        PublishPhotoHeader *headerView = [collectionView dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"PublishCollectionHeaderViewId" forIndexPath:indexPath];
+        headerView.textView.delegate = self;
+        _textView = headerView.textView;
+        
+        return headerView;
+    }
+    
+    PublishPhotoFooter *footerView = [collectionView dequeueReusableSupplementaryViewOfKind:kind withReuseIdentifier:@"PublishCollectionFooterViewId" forIndexPath:indexPath];
+    footerView.loactionLabel.text = @"所在位置";
+    footerView.loactionLabel.userInteractionEnabled = NO;
+    if (!_locationStr) {
+        _locationStr =  [userDefaults objectForKey:@"locationCity"];
+    }
+    if (_locationStr) {
+        footerView.loactionLabel.text = _locationStr;
+        footerView.loactionLabel.userInteractionEnabled = YES;
+    }else{
+        _locationStr = @"不显示地点";
+    }
+    UITapGestureRecognizer *tpg = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(selectLoaction)];
+    footerView.backView.userInteractionEnabled = YES;
+    [footerView.backView addGestureRecognizer:tpg];
+    return footerView;
+}
+
+//点击item方法
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSInteger index = indexPath.item;
+    if (index==_dataArry.count-1&&_dataArry.count<7) {
+        TZImagePickerController *imagePickerVc = [[TZImagePickerController alloc] initWithMaxImagesCount:6 columnNumber:4 delegate:self pushPhotoPickerVc:YES];
+        
+#pragma mark - 四类个性化设置，这些参数都可以不传，此时会走默认设置
+        imagePickerVc.isSelectOriginalPhoto = false;
+        
+        if (_photoImageArray.count > 0) {
+            // 1.设置目前已经选中的图片数组
+            imagePickerVc.selectedAssets = _photoImageArray; // 目前已经选中的图片数组
+        }
+        imagePickerVc.allowTakePicture = YES; // 在内部显示拍照按钮
+        
+        // 2. Set the appearance
+        // 2. 在这里设置imagePickerVc的外观
+         imagePickerVc.navigationBar.barTintColor = localColor;
+         imagePickerVc.oKButtonTitleColorDisabled = [UIColor lightGrayColor];
+         imagePickerVc.oKButtonTitleColorNormal = localColor;
+        
+        // 3. Set allow picking video & photo & originalPhoto or not
+        // 3. 设置是否可以选择视频/图片/原图
+        imagePickerVc.allowPickingVideo = NO;
+        imagePickerVc.allowPickingImage = YES;
+        imagePickerVc.allowPickingOriginalPhoto = NO;
+        
+        // 4. 照片排列按修改时间升序
+        imagePickerVc.sortAscendingByModificationDate = YES;
+        
+        // imagePickerVc.minImagesCount = 3;
+        // imagePickerVc.alwaysEnableDoneBtn = YES;
+        
+        // imagePickerVc.minPhotoWidthSelectable = 3000;
+        // imagePickerVc.minPhotoHeightSelectable = 2000;
+        
+        /// 5. Single selection mode, valid when maxImagesCount = 1
+        /// 5. 单选模式,maxImagesCount为1时才生效
+        imagePickerVc.showSelectBtn = YES;
+        imagePickerVc.allowCrop = NO;
+        imagePickerVc.needCircleCrop = NO;
+        imagePickerVc.circleCropRadius = 100;
+        /*
+         [imagePickerVc setCropViewSettingBlock:^(UIView *cropView) {
+         cropView.layer.borderColor = [UIColor redColor].CGColor;
+         cropView.layer.borderWidth = 2.0;
+         }];*/
+        
+        //imagePickerVc.allowPreview = NO;
+#pragma mark - 到这里为止
+        
+        // You can get the photos by block, the same as by delegate.
+        // 你可以通过block或者代理，来得到用户选择的照片.
+        [imagePickerVc setDidFinishPickingPhotosHandle:^(NSArray<UIImage *> *photos, NSArray *assets, BOOL isSelectOriginalPhoto) {
+        }];
+        [self.navigationController presentViewController:imagePickerVc animated:YES completion:nil];
+    }else{
+     
+//        ReviewPhotosViewController *vc = [[ReviewPhotosViewController alloc] init];
+//        vc.logInController = @"PublishPhotoViewController";
+//        vc.hidenTabBar = YES;
+//        NSMutableArray *dataArray = [NSMutableArray arrayWithArray:_dataArry];
+//        [dataArray removeObject:@"PublishAdd"];
+//        vc.currenIndex = indexPath.item;
+//        [vc setDataArray:dataArray];
+//        [self.navigationController pushViewController:vc animated:YES];
+
+        id asset = _photoImageArray[indexPath.row];
+        BOOL isVideo = NO;
+        if ([asset isKindOfClass:[PHAsset class]]) {
+            PHAsset *phAsset = asset;
+            isVideo = phAsset.mediaType == PHAssetMediaTypeVideo;
+        } else if ([asset isKindOfClass:[ALAsset class]]) {
+            ALAsset *alAsset = asset;
+            isVideo = [[alAsset valueForProperty:ALAssetPropertyType] isEqualToString:ALAssetTypeVideo];
+        }
+        if (isVideo) { // perview video / 预览视频
+            TZVideoPlayerController *vc = [[TZVideoPlayerController alloc] init];
+            TZAssetModel *model = [TZAssetModel modelWithAsset:asset type:TZAssetModelMediaTypeVideo timeLength:@""];
+            vc.model = model;
+            [self.navigationController presentViewController:vc animated:YES completion:nil];
+        } else { // preview photos / 预览照片
+            NSMutableArray *selectedPhotos =[NSMutableArray arrayWithArray:_dataArry];
+            [selectedPhotos removeLastObject];
+            TZImagePickerController *imagePickerVc = [[TZImagePickerController alloc] initWithSelectedAssets:_photoImageArray selectedPhotos:selectedPhotos index:indexPath.row];
+            imagePickerVc.maxImagesCount = 6;
+            imagePickerVc.allowPickingOriginalPhoto = NO;
+            imagePickerVc.isSelectOriginalPhoto = NO;
+            [imagePickerVc setDidFinishPickingPhotosHandle:^(NSArray<UIImage *> *photos, NSArray *assets, BOOL isSelectOriginalPhoto) {
+                _photoImageArray = [NSMutableArray arrayWithArray:assets];
+                _dataArry = [NSMutableArray arrayWithArray:photos];
+                [_dataArry addObject:@"PublishAdd"];
+                [_mainCollectionView reloadData];
+                
+            }];
+            [self.navigationController presentViewController:imagePickerVc animated:YES completion:nil];
+        }
+
+    
+    }
+    NSLog(@"%ld",(long)indexPath.item);
+}
+
+
+#pragma mark - 键盘通知
+//显示
+-(void)keyboardShow:(NSNotification *)notification{
+    // 消息的信息
+    NSDictionary *dic = notification.userInfo;
+    CGSize kbSize = [[dic objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue].size;//得到鍵盤的高度
+    _systemKeybordHeight = kbSize.height;
+    _emojiKeybordView.hidden = NO;
+    _KeybordEmojiIcon.selected = NO;
+    [UIView animateWithDuration:0.23 animations:^{
+        _emojiKeybordView.frame = CGRectMake(0, ScreenHeight - kHvertical(44) - kbSize.height, ScreenWidth, kHvertical(44)+kHvertical(216));
+    }];
+    
+    _emojiView.hidden = YES;
+}
+
+//隐藏
+-(void)keyboardHide:(NSNotification *)notification{
+    
+    if (_isEmojiBtn == YES) {
+        _emojiKeybordView.hidden = NO;
+        _isEmojiBtn = NO;
+    }else{
+        _emojiKeybordView.hidden = YES;
+    }
+    [UIView animateWithDuration:0.23 animations:^{
+        _emojiKeybordView.frame = CGRectMake(0, ScreenHeight-kHvertical(44)-kHvertical(216), ScreenWidth, kHvertical(44)+kHvertical(216));
+    }];
+    
+}
+
+
+#pragma mark - 界面跳转
+//跳转至照片文件夹列表
+-(void)pushToSelectPhotoList:(NSString *)boolSendPhoto{
+    
+    TotalPhotoViewController *menuViewController = [[TotalPhotoViewController alloc] init];
+//    UIViewController * controller = self.view.window.rootViewController;
+//    controller.modalPresentationStyle = UIModalPresentationCurrentContext;
+    menuViewController.view.backgroundColor = [UIColor whiteColor];
+//    menuViewController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+    UINavigationController * jackNavigationController = [[UINavigationController alloc] initWithRootViewController:menuViewController];
+//    [jackNavigationController setModalTransitionStyle:UIModalTransitionStyleCoverVertical];
+    [self.navigationController presentViewController:jackNavigationController animated:YES completion:nil];
+}
+//跳转至照片显示列表
+
+-(void)pushToViewPhotos:(NSString *)boolSendPhoto{
+    
+    ChoicePhotoViewController *menuViewController = [[ChoicePhotoViewController alloc] init];
+    [userDefaults setValue:@"3" forKey:@"PublishLogInType"];
+    menuViewController.titleStr = boolSendPhoto;
+    menuViewController.view.backgroundColor = [UIColor whiteColor];
+    UINavigationController * jackNavigationController = [[UINavigationController alloc] initWithRootViewController:menuViewController];
+    [self.navigationController presentViewController:jackNavigationController animated:YES completion:nil];
+    
+}
+//跳转至球场
+-(void)PresentBollPark{
+    PublishSelectAddressViewController *ballPark = [[PublishSelectAddressViewController alloc]init];
+    __weak __typeof(self)weakSelf = self;
+    NSMutableArray *PlaceArray = [NSMutableArray arrayWithArray:_PlaceDataSouce];
+    
+    ballPark.selectAddress = ^(id selectPark){
+        if ([selectPark isKindOfClass:[NSString class]]) {
+            weakSelf.locationStr = [NSString stringWithFormat:@"%@",selectPark];
+        } else {
+            BallParkSelectModel *SelectPark = selectPark;
+            weakSelf.locationStr = [NSString stringWithFormat:@"%@",SelectPark.name];
+        }
+        [weakSelf.mainCollectionView reloadData];
+    };
+    ballPark.dataSouce = PlaceArray;
+    
+    
+    ballPark.view.backgroundColor = [UIColor whiteColor];
+    UINavigationController * jackNavigationController = [[UINavigationController alloc] initWithRootViewController:ballPark];
+    [self.navigationController presentViewController:jackNavigationController animated:YES completion:nil];
+    
+    
+}
+
+
+#pragma mark - imagepicker代理
+-(void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary<NSString *,id> *)info{
+    UIImage * image = info[UIImagePickerControllerEditedImage];
+    if (!image) {
+        image = info[UIImagePickerControllerOriginalImage];
+    }
+    image = [[ImageTool shareTool] fixOrientation:image];
+    
+    NSData *iamgeData = UIImageJPEGRepresentation(image,0.8);
+    [_dataArry addObject:iamgeData];
+    [_dataArry removeObject:@"PublishAdd"];
+    NSData *data = [NSKeyedArchiver archivedDataWithRootObject:_dataArry];
+    [userDefaults setValue:data forKey:@"PublishPhotosArray"];
+    [_dataArry insertObject:@"PublishAdd" atIndex:0];
+    [picker dismissViewControllerAnimated:NO completion:nil];
+    [_mainCollectionView reloadData];
+    
+}
+
+
+#pragma mark - TZImagePickerController代理
+
+/// 用户点击了取消
+- (void)tz_imagePickerControllerDidCancel:(TZImagePickerController *)picker {
+     NSLog(@"cancel");
+
+}
+
+// The picker should dismiss itself; when it dismissed these handle will be called.
+// If isOriginalPhoto is YES, user picked the original photo.
+// You can get original photo with asset, by the method [[TZImageManager manager] getOriginalPhotoWithAsset:completion:].
+// The UIImage Object in photos default width is 828px, you can set it by photoWidth property.
+// 这个照片选择器会自己dismiss，当选择器dismiss的时候，会执行下面的代理方法
+// 如果isSelectOriginalPhoto为YES，表明用户选择了原图
+// 你可以通过一个asset获得原图，通过这个方法：[[TZImageManager manager] getOriginalPhotoWithAsset:completion:]
+// photos数组里的UIImage对象，默认是828像素宽，你可以通过设置photoWidth属性的值来改变它
+- (void)imagePickerController:(TZImagePickerController *)picker didFinishPickingPhotos:(NSArray *)photos sourceAssets:(NSArray *)assets isSelectOriginalPhoto:(BOOL)isSelectOriginalPhoto {
+    _photoImageArray = [NSMutableArray arrayWithArray:assets];
+    _dataArry = [NSMutableArray arrayWithArray:photos];
+    
+    [_dataArry addObject:@"PublishAdd"];
+    [_mainCollectionView reloadData];
+    // _collectionView.contentSize = CGSizeMake(0, ((_selectedPhotos.count + 2) / 3 ) * (_margin + _itemWH));
+    
+    // 1.打印图片名字
+//    [self printAssetsName:assets];
+}
+
+// If user picking a video, this callback will be called.
+// If system version > iOS8,asset is kind of PHAsset class, else is ALAsset class.
+// 如果用户选择了一个视频，下面的handle会被执行
+// 如果系统版本大于iOS8，asset是PHAsset类的对象，否则是ALAsset类的对象
+- (void)imagePickerController:(TZImagePickerController *)picker didFinishPickingVideo:(UIImage *)coverImage sourceAssets:(id)asset {
+    // open this code to send video / 打开这段代码发送视频
+    // [[TZImageManager manager] getVideoOutputPathWithAsset:asset completion:^(NSString *outputPath) {
+    // NSLog(@"视频导出到本地完成,沙盒路径为:%@",outputPath);
+    // Export completed, send video here, send by outputPath or NSData
+    // 导出完成，在这里写上传代码，通过路径或者通过NSData上传
+    
+    // }];
+    [_mainCollectionView reloadData];
+    // _collectionView.contentSize = CGSizeMake(0, ((_selectedPhotos.count + 2) / 3 ) * (_margin + _itemWH));
+}
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+
+
+
+
+
+@end

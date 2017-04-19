@@ -1,0 +1,39 @@
+//
+//  GolvonAlertView.h
+//  podsGolvon
+//
+//  Created by SHL on 2016/11/8.
+//  Copyright © 2016年 suhuilong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface GolvonAlertView : UIView
+typedef void (^hideBolck)(NSString *str);
+
+
+@property(nonatomic,copy)UIButton  *leftBtn;
+@property(nonatomic,copy)UIButton  *rightBtn;
+@property(nonatomic, copy)UILabel  *titleLabel;
+
+@property(nonatomic,copy)NSString  *leftStr;
+@property(nonatomic,copy)NSString  *rightStr;
+@property(nonatomic,copy)NSString  *titleStr;
+
+@property(nonatomic,copy)NSString  *descStr;
+
+//普通提示
+-(instancetype)initWithFrame:(CGRect)frame title:(NSString *)title leftBtn:(NSString *)leftStr right:(NSString *)rightStr;
+
+//选择是否继续记分
+-(instancetype)initWithFrame:(CGRect)frame createContinueAlertViewBool:(BOOL)bol;
+
+//确认成绩提示
+-(instancetype)initSureWithFrame:(CGRect)frame title:(NSString *)title leftBtn:(NSString *)leftStr right:(NSString *)rightStr;
+//缺少推杆
+-(instancetype)initSureWithFrame:(CGRect)frame title:(NSString *)title desc:(NSString *)desc leftBtn:(NSString *)leftStr right:(NSString *)rightStr;
+
+@property(nonatomic,strong)hideBolck  hideBolck;
+
+-(void)setBlock:(hideBolck)block;
+@end
